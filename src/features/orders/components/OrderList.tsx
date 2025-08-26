@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { Order } from "../types/order";
-import OrderCard from "./OrderCard";
+import OrderCard from "./OrderCard/OrderCard";
 
 interface Props {
   orders: Order[];
 }
 
 export default function OrderList({ orders }: Props) {
-  const [showDetails, setShowDetails] = useState<{ [key: string]: boolean }>({});
+  const [showDetails, setShowDetails] = useState<{ [key: string]: boolean }>(
+    {}
+  );
 
   const toggleDetails = (orderId: string) => {
     setShowDetails((prev) => ({ ...prev, [orderId]: !prev[orderId] }));
@@ -21,11 +23,7 @@ export default function OrderList({ orders }: Props) {
     <ul className="space-y-8">
       {orders.map((order) => (
         <li key={order.id}>
-          <OrderCard
-            order={order}
-            showDetails={!!showDetails[order.id]}
-            toggleDetails={() => toggleDetails(order.id)}
-          />
+          <OrderCard order={order} />
         </li>
       ))}
     </ul>
