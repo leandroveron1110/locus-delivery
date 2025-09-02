@@ -81,96 +81,99 @@ export const ZoneCreatorMap = ({
   }, [drawnFeature]);
 
   return (
-    <div className="flex flex-col lg:flex-row w-full min-h-screen">
-      {/* Panel lateral */}
-      {(isCreating || isEditing) && (
-        <div className="lg:w-1/3 w-full bg-white border-r border-gray-200 p-6 shadow-lg flex flex-col z-10 h-screen lg:h-auto">
-          {isCreating && (
-            <CreateZoneForm
-              companyId={companyId}
-              drawnFeature={drawnFeature}
-              isLoading={isLoading}
-              onZoneCreated={(zone) => {
-                onZoneCreated(zone);
-                handleCancel();
-              }}
-              onCancel={handleCancel}
-            />
-          )}
-          {isEditing && editingZone && (
-            <EditZoneForm
-              drawnFeature={drawnFeature as DrawnFeature}
-              isLoading={isLoading}
-              onZoneDeleted={(id) => {
-                onZoneDeleted(id);
-                handleCancel();
-              }}
-              onZoneEdited={(zone) => {
-                onZoneEdited(zone);
-                handleCancel();
-              }}
-              onCancel={handleCancel}
-              initialData={editingZone}
-            />
-          )}
-        </div>
+<div className="relative w-full h-screen flex">
+  {/* Mapa */}
+  <div
+    className={`h-full ${
+      isCreating || isEditing
+        ? "absolute inset-0 md:relative md:w-2/3"
+        : "w-full"
+    }`}
+  >
+    <MapContainer
+      center={initialCenter}
+      zoom={12}
+      scrollWheelZoom
+      className="w-full h-full"
+    >
+      <TileLayer
+        attribution="&copy; OpenStreetMap"
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+
+      {/* Zonas existentes */}
+      {processedZones.map((zone) => (
+        <ZonePolygon
+          key={zone.id}
+          zone={zone}
+          isEditing={isEditing}
+          editingZoneId={editingZone?.id}
+          onClick={handleZoneClick}
+        />
+      ))}
+
+      {/* Nueva zona */}
+      {isCreating && drawnFeature && (
+        <Polygon
+          positions={newZonePositions}
+          pathOptions={{
+            color: "#dc2626",
+            weight: 3,
+            fillOpacity: 0.3,
+            dashArray: "5, 5",
+          }}
+        >
+          <Tooltip sticky>
+            <div className="text-sm">
+              <p className="font-semibold">Nueva Zona</p>
+              <p>Ajusta los vértices si es necesario.</p>
+            </div>
+          </Tooltip>
+        </Polygon>
       )}
 
-      {/* Mapa */}
-      <div
-        className={`${
-          isCreating || isEditing ? "lg:w-2/3" : "w-full"
-        } flex-1 h-screen`}
-      >
-        <MapContainer
-          center={initialCenter}
-          zoom={12}
-          scrollWheelZoom
-          className="h-full w-full"
-        >
-          <TileLayer
-            attribution="&copy; OpenStreetMap"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+      <MapControls
+        setDrawnFeature={setDrawnFeature}
+        setEditingZone={setEditingZone}
+        editingZone={editingZone}
+      />
+    </MapContainer>
+  </div>
 
-          {/* Zonas existentes */}
-          {processedZones.map((zone) => (
-            <ZonePolygon
-              key={zone.id}
-              zone={zone}
-              isEditing={isEditing}
-              editingZoneId={editingZone?.id}
-              onClick={handleZoneClick}
-            />
-          ))}
-
-          {/* Nueva zona */}
-          {isCreating && drawnFeature && (
-            <Polygon
-              positions={newZonePositions}
-              pathOptions={{
-                color: "#dc2626",
-                weight: 3,
-                fillOpacity: 0.3,
-                dashArray: "5, 5",
-              }}
-            >
-              <Tooltip sticky>
-                <div className="text-sm">
-                  <p className="font-semibold">Nueva Zona</p>
-                  <p>Ajusta los vértices si es necesario.</p>
-                </div>
-              </Tooltip>
-            </Polygon>
-          )}
-
-          <MapControls
-            setDrawnFeature={setDrawnFeature}
-            setEditingZone={setEditingZone}
-            editingZone={editingZone}
-          />
-        </MapContainer>
-      </div>
+  {/* Panel lateral */}
+  {(isCreating || isEditing) && (
+    <div className="absolute top-0 right-0 md:relative md:w-1/3 h-full bg-white border-l border-gray-200 p-3 shadow-lg z-30 overflow-auto">
+      {isCreating && (
+        <CreateZoneForm
+          companyId={companyId}
+          drawnFeature={drawnFeature}
+          isLoading={isLoading}
+          onZoneCreated={(zone) => {
+            onZoneCreated(zone);
+            handleCancel();
+          }}
+          onCancel={handleCancel}
+        />
+      )}
+      {isEditing && editingZone && (
+        <EditZoneForm
+          drawnFeature={drawnFeature as DrawnFeature}
+          isLoading={isLoading}
+          onZoneDeleted={(id) => {
+            onZoneDeleted(id);
+            handleCancel();
+          }}
+          onZoneEdited={(zone) => {
+            onZoneEdited(zone);
+            handleCancel();
+          }}
+          onCancel={handleCancel}
+          initialData={editingZone}
+        />
+      )}
     </div>
+  )}
+</div>
+
   );
 };

@@ -77,7 +77,7 @@ export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+<div className="flex flex-col lg:flex-row w-full h-screen">
         <ZoneCreatorMap
           zones={deliveries}
           onZoneCreated={handleZoneCreated}
