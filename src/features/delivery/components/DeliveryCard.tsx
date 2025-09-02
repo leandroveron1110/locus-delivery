@@ -17,7 +17,7 @@ export default function DeliveryCard({ delivery }: Props) {
         <h2 className="text-lg font-semibold">{delivery.name}</h2>
       </Link>
       <p>Teléfono: {delivery.phone}</p>
-      <p>Zonas: {delivery.zones.join(", ")}</p>
+      <p>Zonas: {delivery.zones?.join(", ")}</p>
       <p>Estado: {delivery.isActive ? "Activo" : "Inactivo"}</p>
     </div>
   );

@@ -1,15 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { MapContainer, TileLayer, useMap } from "react-leaflet";
+import { useState, useCallback, useMemo } from "react";
+import { MapContainer, TileLayer, Polygon, Tooltip } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "@geoman-io/leaflet-geoman-free";
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
-import { ZoneForm } from "./ZoneForm";
+import { IZone, DrawnFeature, Zone } from "../types/zone";
+import { ZonePolygon } from "./ZonePolygonComponent";
+import { MapControls } from "./MapControls";
+import { useZones } from "../hooks/useZones";
+import dynamic from "next/dynamic";
 
-// Fix de íconos de Leaflet
+// Formularios dinámicos
+const CreateZoneForm = dynamic(
+  () => import("./CreateZoneForm").then((c) => c.CreateZoneForm),
+  { ssr: false }
+);
+const EditZoneForm = dynamic(
+  () => import("./EditZoneForm").then((e) => e.EditZoneForm),
+  { ssr: false }
+);
+
+// Fix Leaflet icons
 // @ts-ignore
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -19,91 +32,143 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png",
 });
 
-type GeoJsonPolygon = {
-  type: "Polygon";
-  coordinates: number[][][];
-};
-
 interface ZoneCreatorMapProps {
-  onZoneCreated: (zone: {
-    name: string;
-    price: number;
-    geometry: GeoJsonPolygon;
-  }) => void;
+  zones: IZone[] | undefined;
+  onZoneCreated: (zone: Zone) => void;
+  onZoneEdited: (zone: Partial<IZone>) => void;
+  onZoneDeleted: (zoneId: string) => void;
   isLoading: boolean;
+  companyId: string;
 }
+
 const initialCenter: [number, number] = [-32.483, -58.233];
 
-// Control de dibujo
-const DrawControl = ({ setDrawnFeature }: any) => {
-  const map = useMap();
-
-  useState(() => {
-    map.pm.addControls({
-      position: "topleft",
-      drawPolygon: true, // Solo permitir polígonos
-      editMode: true, // Permitir edición de polígonos
-      dragMode: false,
-      cutPolygon: false,
-      rotateMode: false,
-      drawMarker: false,
-      drawCircle: false,
-      drawCircleMarker: false,
-      drawRectangle: true,
-      drawPolyline: false,
-      drawText: false,
-    });
-
-    map.on("pm:create", (e: any) => setDrawnFeature(e.layer.toGeoJSON()));
-    map.on("pm:update", (e: any) => setDrawnFeature(e.layer.toGeoJSON()));
-    map.on("pm:remove", () => setDrawnFeature(null));
-
-    return () => {
-      map.pm.removeControls();
-      map.off("pm:create");
-      map.off("pm:update");
-      map.off("pm:remove");
-    };
-  });
-
-  return null;
-};
-
 export const ZoneCreatorMap = ({
+  zones,
   onZoneCreated,
+  onZoneEdited,
+  onZoneDeleted,
   isLoading,
+  companyId,
 }: ZoneCreatorMapProps) => {
-  const [drawnFeature, setDrawnFeature] = useState<any>(null);
+  const [drawnFeature, setDrawnFeature] = useState<DrawnFeature | null>(null);
+  const [editingZone, setEditingZone] = useState<IZone | null>(null);
+
+  const processedZones = useZones(zones);
+
+  const handleCancel = useCallback(() => {
+    setDrawnFeature(null);
+    setEditingZone(null);
+  }, []);
+
+  const handleZoneClick = useCallback((z: IZone) => {
+    setEditingZone(z);
+    setDrawnFeature({
+      type: "Feature",
+      properties: {},
+      geometry: z.geometry,
+    });
+  }, []);
+
+  const isCreating = !!drawnFeature && !editingZone;
+  const isEditing = !!editingZone;
+
+  const newZonePositions = useMemo(() => {
+    if (!drawnFeature) return [];
+    return drawnFeature.geometry.coordinates[0].map(
+      (coord) => [coord[1], coord[0]] as [number, number]
+    );
+  }, [drawnFeature]);
 
   return (
-    <div className="flex flex-col lg:flex-row h-[750px] w-full rounded-2xl overflow-hidden shadow-2xl bg-gray-50">
-      {/* Formulario solo aparece si hay polígono dibujado */}
-      {drawnFeature && (
-        <div className="lg:w-1/3 p-8">
-          <ZoneForm
-            drawnFeature={drawnFeature}
-            isLoading={isLoading}
-            onZoneCreated={onZoneCreated}
-            onCancel={() => setDrawnFeature(null)}
-          />
+    <div className="flex flex-col lg:flex-row w-full min-h-screen">
+      {/* Panel lateral */}
+      {(isCreating || isEditing) && (
+        <div className="lg:w-1/3 w-full bg-white border-r border-gray-200 p-6 shadow-lg flex flex-col z-10 h-screen lg:h-auto">
+          {isCreating && (
+            <CreateZoneForm
+              companyId={companyId}
+              drawnFeature={drawnFeature}
+              isLoading={isLoading}
+              onZoneCreated={(zone) => {
+                onZoneCreated(zone);
+                handleCancel();
+              }}
+              onCancel={handleCancel}
+            />
+          )}
+          {isEditing && editingZone && (
+            <EditZoneForm
+              drawnFeature={drawnFeature as DrawnFeature}
+              isLoading={isLoading}
+              onZoneDeleted={(id) => {
+                onZoneDeleted(id);
+                handleCancel();
+              }}
+              onZoneEdited={(zone) => {
+                onZoneEdited(zone);
+                handleCancel();
+              }}
+              onCancel={handleCancel}
+              initialData={editingZone}
+            />
+          )}
         </div>
       )}
 
       {/* Mapa */}
       <div
-        className={`flex-1 ${drawnFeature ? "lg:w-2/3" : "w-full"} h-[750px]`}
+        className={`${
+          isCreating || isEditing ? "lg:w-2/3" : "w-full"
+        } flex-1 h-screen`}
       >
         <MapContainer
           center={initialCenter}
           zoom={12}
-          scrollWheelZoom={true}
-          className="h-full w-full rounded-r-2xl"
+          scrollWheelZoom
+          className="h-full w-full"
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            attribution="&copy; OpenStreetMap"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <DrawControl setDrawnFeature={setDrawnFeature} />
+
+          {/* Zonas existentes */}
+          {processedZones.map((zone) => (
+            <ZonePolygon
+              key={zone.id}
+              zone={zone}
+              isEditing={isEditing}
+              editingZoneId={editingZone?.id}
+              onClick={handleZoneClick}
+            />
+          ))}
+
+          {/* Nueva zona */}
+          {isCreating && drawnFeature && (
+            <Polygon
+              positions={newZonePositions}
+              pathOptions={{
+                color: "#dc2626",
+                weight: 3,
+                fillOpacity: 0.3,
+                dashArray: "5, 5",
+              }}
+            >
+              <Tooltip sticky>
+                <div className="text-sm">
+                  <p className="font-semibold">Nueva Zona</p>
+                  <p>Ajusta los vértices si es necesario.</p>
+                </div>
+              </Tooltip>
+            </Polygon>
+          )}
+
+          <MapControls
+            setDrawnFeature={setDrawnFeature}
+            setEditingZone={setEditingZone}
+            editingZone={editingZone}
+          />
         </MapContainer>
       </div>
     </div>

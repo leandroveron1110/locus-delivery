@@ -4,7 +4,6 @@ import { useAuthStore } from "@/features/auth/store/authStore";
 
 export const useDeliveries = () => {
   const user = useAuthStore((state) => state.user);
-  console.log(user);
   const ownerId = user ? user.id : ""
   return useQuery({
     queryKey: ["deliveries"],
