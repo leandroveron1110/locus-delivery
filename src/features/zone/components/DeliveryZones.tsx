@@ -8,8 +8,8 @@ import {
   useDeliveryCompanyZones,
   useUpdateZone,
 } from "../hooks/useDeliveries";
-import { GeoJsonPolygon, IZone, Zone } from "../types/zone";
-// import { ZoneCreatorMap } from '@/features/zone/components/ZoneCreatorMap';
+import { IZone, Zone } from "../types/zone";
+import Loader from "@/features/common/ui/Loader/Loader";
 
 const ZoneCreatorMap = dynamic(
   () =>
@@ -24,10 +24,23 @@ interface DeliveryZonesProps {
 export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [_createdZone, setCreatedZone] = useState<IZone | null>(null);
-  const { data: deliveries, error } = useDeliveryCompanyZones(companyId);
+
+  // Traemos las zonas de la compañía
+  const {
+    data: zones,
+    error,
+    isLoading: zonesLoading,
+  } = useDeliveryCompanyZones(companyId);
+
   const createZoneMutation = useCreateZone();
   const updateZoneMutation = useUpdateZone();
   const deleteZoneMutation = useDeleteZone();
+
+  if (zonesLoading) return <Loader message="Cargando zonas..." />;
+  if (error)
+    return (
+      <div className="text-center text-red-600">Error al cargar zonas</div>
+    );
 
   const handleZoneCreated = async (zone: Zone) => {
     setIsLoading(true);
@@ -36,10 +49,10 @@ export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
       await createZoneMutation.mutateAsync({
         ...zone,
         price: Number(zone.price),
-        companyId: companyId,
+        companyId,
       });
-    } catch (error) {
-      console.error("Error al guardar la zona:", error);
+    } catch (err) {
+      console.error("Error al guardar la zona:", err);
       alert("Hubo un error al guardar la zona. Por favor, intenta de nuevo.");
     } finally {
       setIsLoading(false);
@@ -51,41 +64,39 @@ export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
     setCreatedZone(null);
     try {
       const { geometry, id, ...data } = zone;
-      await updateZoneMutation.mutateAsync({
-        id: id || "",
-        data,
-      });
-    } catch (error) {
-      console.error("Error al guardar la zona:", error);
+      if (!id) return;
+      await updateZoneMutation.mutateAsync({ id, data });
+    } catch (err) {
+      console.error("Error al editar la zona:", err);
       alert("Hubo un error al guardar la zona. Por favor, intenta de nuevo.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const onZoneDeleted = async (zoneId: string)=> {
+  const onZoneDeleted = async (zoneId: string) => {
     setIsLoading(true);
     setCreatedZone(null);
     try {
       await deleteZoneMutation.mutateAsync(zoneId);
-    } catch (error) {
-      console.error("Error al guardar la zona:", error);
-      alert("Hubo un error al guardar la zona. Por favor, intenta de nuevo.");
+    } catch (err) {
+      console.error("Error al eliminar la zona:", err);
+      alert("Hubo un error al eliminar la zona. Por favor, intenta de nuevo.");
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   return (
-<div className="flex flex-col lg:flex-row w-full h-screen">
-        <ZoneCreatorMap
-          zones={deliveries}
-          onZoneCreated={handleZoneCreated}
-          onZoneEdited={onZoneEdited}
-          onZoneDeleted={onZoneDeleted}
-          isLoading={isLoading}
-          companyId={companyId}
-        />
+    <div className="flex flex-col lg:flex-row w-full h-screen">
+      <ZoneCreatorMap
+        zones={zones}
+        onZoneCreated={handleZoneCreated}
+        onZoneEdited={onZoneEdited}
+        onZoneDeleted={onZoneDeleted}
+        isLoading={isLoading}
+        companyId={companyId}
+      />
     </div>
   );
 }

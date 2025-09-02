@@ -13,8 +13,8 @@ export const useDeliveryCompanyZones = (id: string) => {
   return useQuery({
     queryKey: ["delivery", id],
     queryFn: () => fetchDeliveryZonesByDeliveryCompanyId(id),
-    staleTime: 1000 * 60 * 10, // 10 minutos
-    refetchOnWindowFocus: false,
+    staleTime: 0, // 10 minutos
+    refetchOnWindowFocus: true,
     refetchOnReconnect: false,
     enabled: !!id,
   });

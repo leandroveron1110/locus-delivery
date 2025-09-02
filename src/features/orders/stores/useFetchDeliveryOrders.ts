@@ -1,7 +1,7 @@
 // hooks/useFetchDeliveyOrders.ts
 import { useEffect } from "react";
 import { useDeliveryOrdersStore } from "./useDeliveryOrdersStore";
-import { fetchDeliveryById } from "@/features/delivery/api/delivery-api";
+import { fetchDeliveryOrderByDeliveryId } from "@/features/delivery/api/delivery-api";
 
 export function useFetchDeliveryOrders(businessId: string) {
   const addOrder = useDeliveryOrdersStore((s) => s.addOrder);
@@ -13,7 +13,7 @@ export function useFetchDeliveryOrders(businessId: string) {
   }, [businessId, addOrder]);
 
   const fetch = async () => {
-    const res = await fetchDeliveryById(businessId);
+    const res = await fetchDeliveryOrderByDeliveryId(businessId);
 
     res.forEach((order: any) => addOrder(order));
   };
