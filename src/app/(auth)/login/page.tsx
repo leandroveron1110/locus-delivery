@@ -5,7 +5,6 @@ import React, { useEffect } from 'react';
 import { LoginForm } from '../../../features/auth/components/LoginForm'; // Importa el componente del formulario
 import { useRouter } from 'next/navigation'; // Para la redirección
 import { useAuthStore } from '@/features/auth/store/authStore';
-import Link from 'next/link';
 
 /**
  * Página de inicio de sesión.
@@ -13,7 +12,7 @@ import Link from 'next/link';
  */
 export default function LoginPage() {
   const router = useRouter();
-  const { error, isAuthenticated, isLoading, checkAuth   } = useAuthStore(); // Obtiene el estado de autenticación
+  const { isAuthenticated, isLoading, checkAuth   } = useAuthStore(); // Obtiene el estado de autenticación
 
   useEffect(() => {
     // Al montar la página, verifica el estado de autenticación.

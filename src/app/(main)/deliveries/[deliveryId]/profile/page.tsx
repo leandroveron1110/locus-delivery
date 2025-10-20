@@ -13,16 +13,6 @@ import { getDisplayErrorMessage } from "@/lib/uiErrors";
 export default function DeliveryProfilePage() {
   const params = useParams<{ deliveryId: string }>();
   const deliveryId = params?.deliveryId;
-
-  // Si todavía no hay deliveryId, mostramos un loader
-  if (!deliveryId) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
-        <Loader message="Cargando perfil..." />
-      </div>
-    );
-  }
-
   const { data: delivery, isLoading, error, isError } = useDelivery(deliveryId);
 
   const { addAlert } = useAlert();
@@ -35,6 +25,16 @@ export default function DeliveryProfilePage() {
       });
     }
   }, [isError, error, addAlert]);
+
+  // Si todavía no hay deliveryId, mostramos un loader
+  if (!deliveryId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+        <Loader message="Cargando perfil..." />
+      </div>
+    );
+  }
+
 
   const containerClass =
     "flex items-center justify-center min-h-screen bg-gray-50 p-4";

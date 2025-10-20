@@ -9,16 +9,13 @@ export function useFetchDeliveryOrders(businessId: string) {
   useEffect(() => {
     if (!businessId) return;
 
+    const fetch = async () => {
+      const res = await fetchDeliveryOrderByDeliveryId(businessId);
+
+      if (res) {
+        res.forEach((order) => addOrder(order));
+      }
+    };
     fetch();
   }, [businessId, addOrder]);
-
-  const fetch = async () => {
-    const res = await fetchDeliveryOrderByDeliveryId(businessId);
-
-    if(res) {
-      res.forEach((order) => addOrder(order));
-
-    }
-
-  };
 }

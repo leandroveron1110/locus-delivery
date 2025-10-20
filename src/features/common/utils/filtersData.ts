@@ -1,6 +1,6 @@
 // filtersData.ts
 
-import { Order, OrderStatus, PaymentMethodType, PaymentStatus } from "@/features/orders/types/order";
+import { OrderStatus } from "@/features/orders/types/order";
 
 
 

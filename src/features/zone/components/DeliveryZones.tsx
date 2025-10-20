@@ -23,7 +23,6 @@ interface DeliveryZonesProps {
 }
 export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [_createdZone, setCreatedZone] = useState<IZone | null>(null);
 
   // Traemos las zonas de la compañía
   const {
@@ -44,7 +43,6 @@ export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
 
   const handleZoneCreated = async (zone: Zone) => {
     setIsLoading(true);
-    setCreatedZone(null);
     try {
       await createZoneMutation.mutateAsync({
         ...zone,
@@ -61,9 +59,8 @@ export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
 
   const onZoneEdited = async (zone: Partial<IZone>) => {
     setIsLoading(true);
-    setCreatedZone(null);
     try {
-      const { geometry, id, ...data } = zone;
+      const { id, ...data } = zone;
       if (!id) return;
       await updateZoneMutation.mutateAsync({ id, data });
     } catch (err) {
@@ -76,7 +73,6 @@ export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
 
   const onZoneDeleted = async (zoneId: string) => {
     setIsLoading(true);
-    setCreatedZone(null);
     try {
       await deleteZoneMutation.mutateAsync(zoneId);
     } catch (err) {

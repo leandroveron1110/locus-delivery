@@ -56,7 +56,7 @@ export default function DeliveryProfile({ delivery }: Props) {
         type: "success",
         text: "Perfil actualizado correctamente.",
       });
-    } catch (err) {
+    } catch {
       setMessage({ type: "error", text: "Error al actualizar el perfil." });
     } finally {
       setLoading(false);

@@ -3,7 +3,6 @@
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { useAlert } from "@/features/common/ui/Alert/Alert";
 import EmptyState from "@/features/common/ui/EmptyState/EmptyState";
-import ErrorMessage from "@/features/common/ui/ErrorMessage/ErrorMessage";
 import Loader from "@/features/common/ui/Loader/Loader";
 import DeliveryCard from "@/features/delivery/components/DeliveryCard";
 import { useDeliveries } from "@/features/delivery/hooks/useDeliveries";

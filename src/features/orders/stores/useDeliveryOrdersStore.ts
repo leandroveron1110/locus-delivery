@@ -15,7 +15,6 @@ export const useDeliveryOrdersStore = create<DeliveryOrdersState>((set) => ({
       return { orders: [order, ...state.orders] }; // 
     }),
   
-  // 🚨 FUNCIÓN CORREGIDA:
   updateOrderStatus: (orderId, status) =>
     set((state) => ({ 
       orders: state.orders.map((o) =>

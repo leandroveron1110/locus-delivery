@@ -5,14 +5,11 @@ import {
   EOrderStatusDelivery,
   Order,
   OrderStatus,
-  DeliveryType,
-  PaymentMethodType,
 } from "../../types/order";
 import OrderHeader from "./components/OrderHeader";
 import { fetchUpdateOrdersByOrderID } from "../../api/order-api";
 import { useDeliveryOrdersStore } from "../../stores/useDeliveryOrdersStore";
 import OrderStatusDeliveryButtons from "./components/OrderStatusDeliveryButtons";
-import { Copy } from "lucide-react";
 import { useAlert } from "@/features/common/ui/Alert/Alert";
 import { getDisplayErrorMessage } from "@/lib/uiErrors";
 

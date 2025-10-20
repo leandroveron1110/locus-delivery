@@ -3,15 +3,11 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware"; // Para persistir el estado
 import {
   User,
-  LoginPayload,
   LoginResponse,
-  RegisterPayload,
-  RegisterResponse,
   AuthState,
   AuthStore, // <-- Importa la nueva interfaz AuthStore
 } from "../types/auth";
 import {
-  login as apiLogin,
   getMe as apiGetMe,
 } from "../api/authApi";
 import { ApiResult } from "@/lib/apiFetch";

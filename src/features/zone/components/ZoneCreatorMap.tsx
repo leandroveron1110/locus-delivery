@@ -22,8 +22,8 @@ const EditZoneForm = dynamic(
   { ssr: false }
 );
 
-// Fix Leaflet icons
-// @ts-ignore
+// Fix de íconos de Leaflet
+// @ts-expect-error - Leaflet type definitions don't include _getIconUrl, so we override it manually.
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:

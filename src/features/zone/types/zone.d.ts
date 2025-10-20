@@ -53,6 +53,6 @@ export type GeoJsonPolygon = {
 
 export interface DrawnFeature {
   type: "Feature";
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   geometry: GeoJsonPolygon;
 }

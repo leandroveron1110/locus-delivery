@@ -39,9 +39,6 @@ function OrderStatusSelector({ orderId, status, handleChangeStatus }: Props) {
     }
   };
 
-  // Para el focus ring, como no podemos interpolar clases tailwind, usamos un color fijo o inline style
-  const focusRingColor = currentStatus?.color.replace("bg-", "") || "gray-400";
-
   return (
     <div className="mt-2 flex items-center space-x-2">
       {/* Indicador de color */}

@@ -98,10 +98,10 @@ export default function DeliveryOrderHeader({
     const isTransfer = paymentType === PaymentMethodType.TRANSFER;
 
     let paymentDetail = "";
-    let businessObs = businessObservations?.trim()
+    const businessObs = businessObservations?.trim()
       ? `Observaciones: ${businessObservations}`
       : "";
-    let customerObs = customerObservations?.trim()
+    const customerObs = customerObservations?.trim()
       ? `Observaciones: ${customerObservations}`
       : "";
 

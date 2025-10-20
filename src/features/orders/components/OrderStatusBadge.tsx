@@ -10,7 +10,6 @@ import {
   RefreshCcw,
   DollarSign,
   Loader2,
-  HelpCircle,
 } from "lucide-react";
 import { OrderStatus } from "../types/order";
 
@@ -20,7 +19,7 @@ interface Props {
 
 const statusMap: Record<
   OrderStatus,
-  { label: string; color: string; Icon: React.FC<any> }
+  { label: string; color: string; Icon: React.ElementType }
 > = {
   // 1. Creación y pago
   [OrderStatus.PENDING]: {

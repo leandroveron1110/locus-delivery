@@ -1,9 +1,8 @@
 // src/components/BusinessOrdersPage.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useAlert } from "@/features/common/ui/Alert/Alert";
-import { getDisplayErrorMessage } from "@/lib/uiErrors";
 import { useFetchDeliveryOrders } from "../stores/useFetchDeliveryOrders";
 import { useDeliveryOrdersSocket } from "../socket/useDeliverySocket";
 import { useDeliveryOrdersStore } from "../stores/useDeliveryOrdersStore";
@@ -25,8 +24,6 @@ interface Props {
 export default function BusinessOrdersPage({ deliveryId }: Props) {
   useFetchDeliveryOrders(deliveryId);
   useDeliveryOrdersSocket(deliveryId);
-
-  const { addAlert } = useAlert();
 
   const orders = useDeliveryOrdersStore((s) => s.orders as Order[]);
   const [searchTerm, setSearchTerm] = useState("");
