@@ -14,6 +14,23 @@ export default function OrderStatusDeliveryButtons({
 
   switch (status) {
     // Delivery recibe la orden pendiente
+    case OrderStatus.READY_FOR_DELIVERY_PICKUP:
+      return (
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => handleStatusChange(OrderStatus.DELIVERY_ACCEPTED)}
+            className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors"
+          >
+            <Check className="w-4 h-4" /> Aceptar Pedido
+          </button>
+          <button
+            onClick={() => handleStatusChange(OrderStatus.DELIVERY_REJECTED)}
+            className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors"
+          >
+            <X className="w-4 h-4" /> Rechazar Pedido
+          </button>
+        </div>
+      );
     case OrderStatus.DELIVERY_PENDING:
       return (
         <div className="flex gap-2 flex-wrap">

@@ -20,12 +20,12 @@ export default function OrderList({ orders }: Props) {
   }
 
   return (
-    <ul className="space-y-8">
-      {orders.map((order) => (
-        <li key={order.id}>
+    <div className="w-full bg-gray-100">
+      <div className="grid grid-cols-1 p-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+        {orders.map((order) => (
           <OrderCard order={order} />
-        </li>
-      ))}
-    </ul>
+        ))}
+      </div>
+    </div>
   );
 }

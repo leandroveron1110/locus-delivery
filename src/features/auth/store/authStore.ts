@@ -12,9 +12,9 @@ import {
 } from "../types/auth";
 import {
   login as apiLogin,
-  register as apiRegister,
   getMe as apiGetMe,
 } from "../api/authApi";
+import { ApiResult } from "@/lib/apiFetch";
 
 // Define el estado inicial de autenticación
 // NOTA: initialState ahora solo contiene las propiedades de AuthState
@@ -52,7 +52,6 @@ export const useAuthStore = create<AuthStore>()(
           });
           return response.user; // Devuelve el usuario para uso en el componente
         } catch (error: any) {
-          console.error("Login failed:", error);
           set({
             ...initialState, // Resetea el estado a no autenticado
             isLoading: false,
@@ -81,7 +80,6 @@ export const useAuthStore = create<AuthStore>()(
           });
           return response.user;
         } catch (error: any) {
-          console.error("Register failed:", error);
           set({
             ...initialState,
             isLoading: false,
@@ -115,7 +113,7 @@ export const useAuthStore = create<AuthStore>()(
 
         // Si hay un token, intenta obtener los datos del usuario
         try {
-          const user: User = await apiGetMe(); // Usa la función de la API para obtener el perfil
+          const user: ApiResult<User> = await apiGetMe(); // Usa la función de la API para obtener el perfil
           set({
             user: user,
             token: token, // Mantiene el token que ya teníamos
@@ -124,7 +122,6 @@ export const useAuthStore = create<AuthStore>()(
             error: null,
           });
         } catch (error: any) {
-          console.error("Failed to retrieve user session:", error);
           localStorage.removeItem("authToken"); // Token inválido o expirado, lo eliminamos
           set({
             ...initialState,

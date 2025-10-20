@@ -6,11 +6,13 @@ import {
   fetchDeleteDeliveryZone
 } from "../api/delivery-zones-api";
 import { IZone, Zone } from "../types/zone";
+import { ApiResult } from "@/lib/apiFetch";
+import { ApiError } from "@/types/api";
 
 // --- Hooks de React Query ---
 
 export const useDeliveryCompanyZones = (id: string) => {
-  return useQuery({
+  return useQuery<ApiResult<IZone[]>, ApiError>({
     queryKey: ["delivery", id],
     queryFn: () => fetchDeliveryZonesByDeliveryCompanyId(id),
     staleTime: 0, // 10 minutos

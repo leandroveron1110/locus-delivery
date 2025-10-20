@@ -4,9 +4,12 @@ import {
   fetchDeliveriesByOwner,
   fetchDeliveryOrderByDeliveryId,
 } from "../api/delivery-api";
+import { ApiResult } from "@/lib/apiFetch";
+import { DeliveryCompany } from "../types/delivery";
+import { ApiError } from "@/types/api";
 
 export const useDeliveries = (ownerId?: string | null) => {
-  return useQuery({
+  return useQuery<ApiResult<DeliveryCompany[]>, ApiError>({
     queryKey: ["deliveries", ownerId],
     queryFn: () => fetchDeliveriesByOwner(ownerId),
     staleTime: 0, // siempre considerar obsoletos para traer fresh data
@@ -17,7 +20,7 @@ export const useDeliveries = (ownerId?: string | null) => {
 };
 
 export const useDelivery = (deliveryId: string) => {
-  return useQuery({
+  return useQuery<ApiResult<DeliveryCompany>, ApiError>({
     queryKey: ["delivery", deliveryId],
     queryFn: () => fetchDeliveriesByDeliveryId(deliveryId!),
     staleTime: 0,

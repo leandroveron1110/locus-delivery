@@ -90,7 +90,7 @@ export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
   return (
     <div className="flex flex-col lg:flex-row w-full h-screen">
       <ZoneCreatorMap
-        zones={zones}
+        zones={zones ? zones : undefined}
         onZoneCreated={handleZoneCreated}
         onZoneEdited={onZoneEdited}
         onZoneDeleted={onZoneDeleted}

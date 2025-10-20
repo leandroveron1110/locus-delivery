@@ -1,87 +1,96 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useCallback } from "react";
 import { useMap } from "react-leaflet";
-import L from "leaflet";
-import { IZone } from "../types/zone";
+import * as L from "leaflet";
+import { IZone, DrawnFeature } from "../types/zone";
 
-interface PMLayer extends L.Layer {
-  pm: {
-    disable: () => void;
-    enable: (options?: any) => void;
-    toggleEdit: () => void;
-    _inEditMode: boolean;
-  };
+// Usa el tipo PMEvent que declaraste
+type PMEvent = L.PMEvent;
+
+interface MapControlsProps {
+  setDrawnFeature: (feature: DrawnFeature | null) => void;
+  setEditingZone: (zone: IZone | null) => void;
+  editingZone: IZone | null;
 }
 
 export const MapControls = ({
   setDrawnFeature,
   setEditingZone,
   editingZone,
-}: {
-  setDrawnFeature: any;
-  setEditingZone: (zone: IZone | null) => void;
-  editingZone: IZone | null;
-}) => {
+}: MapControlsProps) => {
   const map = useMap();
-  const geoJsonLayerRef = useRef<L.LayerGroup>(L.layerGroup()).current;
-  const drawnLayerRef = useRef<PMLayer | null>(null);
+
+  const onCreate = useCallback((e: PMEvent) => {
+    map.pm.disableDraw();
+    setDrawnFeature(e.layer.toGeoJSON() as DrawnFeature);
+    e.layer.remove(); 
+  }, [map, setDrawnFeature]);
+
+  const onUpdate = useCallback((e: PMEvent) => {
+    setDrawnFeature(e.layer.toGeoJSON() as DrawnFeature);
+  }, [setDrawnFeature]);
+
+  const onRemove = useCallback(() => {
+    setDrawnFeature(null);
+    setEditingZone(null);
+  }, [setDrawnFeature, setEditingZone]);
 
   useEffect(() => {
-    geoJsonLayerRef.addTo(map);
-
+    // Inicialización y limpieza
     map.pm.disableGlobalEditMode();
     map.pm.disableGlobalDragMode();
     map.pm.disableGlobalCutMode();
 
+    // =================================================================
+    // 🛠️ AJUSTE DE CONTROLES: Solo Polígono y Rectángulo, y el botón de Borrar Capas
+    // Desactivamos 'editMode' y 'cutPolygon' ya que los implementarás después.
     map.pm.addControls({
       position: "topleft",
-      drawPolygon: true,
-      editMode: true,
-      dragMode: false,
-      cutPolygon: true,
-      rotateMode: false,
+      
+      // Controles de Dibujo Requeridos
+      drawPolygon: true, // ✅ Dibujar Polígono
+      drawRectangle: true, // ✅ Dibujar Rectángulo
+      
+      // Controles de Edición y Borrado (Desactivados temporalmente)
+      editMode: false, // ❌ Desactivado por ahora
+      cutPolygon: false, // ❌ Desactivado por ahora
+      
+      // Borrar todas las capas dibujadas
+      removalMode: false, // Permitir borrar manualmente la figura si el usuario lo desea.
+      
+      // Controles de Dibujo No Requeridos (Aseguramos que estén en false)
       drawMarker: false,
       drawCircle: false,
       drawCircleMarker: false,
-      drawRectangle: true,
       drawPolyline: false,
       drawText: false,
+      
+      // Otros Modos (Aseguramos que estén en false)
+      dragMode: false, 
+      rotateMode: false,
     });
+    // =================================================================
 
-    const onCreate = (e: any) => {
-      geoJsonLayerRef.clearLayers();
-      geoJsonLayerRef.addLayer(e.layer);
-      drawnLayerRef.current = e.layer as PMLayer;
-      setDrawnFeature(e.layer.toGeoJSON());
-    };
-
-    const onUpdate = (e: any) => setDrawnFeature(e.layer.toGeoJSON());
-    const onRemove = () => {
-      setDrawnFeature(null);
-      setEditingZone(null);
-    };
-
-    map.on("pm:create", onCreate);
-    map.on("pm:edit", onUpdate);
-    map.on("pm:remove", onRemove);
-
+    // Suscripción a eventos.
+    map.on("pm:create", onCreate as L.LeafletEventHandlerFn);
+    map.on("pm:edit", onUpdate as L.LeafletEventHandlerFn);
+    map.on("pm:remove", onRemove as L.LeafletEventHandlerFn);
+    
     return () => {
-      map.off("pm:create", onCreate);
-      map.off("pm:edit", onUpdate);
-      map.off("pm:remove", onRemove);
+      map.off("pm:create", onCreate as L.LeafletEventHandlerFn);
+      map.off("pm:edit", onUpdate as L.LeafletEventHandlerFn);
+      map.off("pm:remove", onRemove as L.LeafletEventHandlerFn);
       map.pm.removeControls();
-      map.removeLayer(geoJsonLayerRef);
     };
-  }, [map, setDrawnFeature, setEditingZone]);
-
+  }, [map, onCreate, onUpdate, onRemove]);
+  
+  // Mantenemos la lógica de deshabilitar el dibujo si estamos en modo edición de zona
   useEffect(() => {
-    if (!editingZone && drawnLayerRef.current) {
-      drawnLayerRef.current.pm.disable();
-      geoJsonLayerRef.removeLayer(drawnLayerRef.current);
-      drawnLayerRef.current = null;
-    }
-  }, [editingZone, geoJsonLayerRef]);
+      if (editingZone) {
+          map.pm.disableDraw();
+      }
+  }, [editingZone, map]);
 
   return null;
 };

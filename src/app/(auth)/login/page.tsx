@@ -46,12 +46,6 @@ export default function LoginPage() {
           Iniciar Sesión en Locus
         </h1>
         <LoginForm />
-        <p className="mt-6 text-center text-gray-600">
-          ¿No tienes una cuenta?{' '}
-          <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-            Regístrate aquí
-          </Link>
-        </p>
       </div>
     </div>
   );

@@ -1,28 +1,55 @@
-import axios from "@/lib/api";
+import { apiGet, apiPatch, ApiResult } from "@/lib/apiFetch";
 import { DeliveryCompany } from "../types/delivery";
+import { handleApiError } from "@/features/common/utils/handleApiError";
 
-export const fetchDeliveriesByOwner = async (ownerId?: string | null): Promise<DeliveryCompany[]> => {
-  if (!ownerId) return [];
-  const res = await axios.get<DeliveryCompany[]>(`/delivery/companies/owner/${ownerId}`);
-  return res.data;
+// --- Obtener todas las empresas de delivery por dueño ---
+export const fetchDeliveriesByOwner = async (
+  ownerId?: string | null
+): Promise<ApiResult<DeliveryCompany[]>> => {
+  try {
+    if (!ownerId) return [];
+    const res = await apiGet<DeliveryCompany[]>(
+      `/delivery/companies/owner/${ownerId}`
+    );
+    return res;
+  } catch (error: unknown) {
+    throw handleApiError(error, "Error fetching delivery companies by owner ID");
+  }
 };
 
-
-export const fetchDeliveriesByDeliveryId = async (deliveryId: string | null): Promise<DeliveryCompany> => {
-  const res = await axios.get<DeliveryCompany>(`/delivery/companies/${deliveryId}`);
-  return res.data;
+// --- Obtener una empresa de delivery por su ID ---
+export const fetchDeliveriesByDeliveryId = async (
+  deliveryId: string | null
+): Promise<ApiResult<DeliveryCompany>> => {
+  try {
+    const res = await apiGet<DeliveryCompany>(
+      `/delivery/companies/${deliveryId}`
+    );
+    return res;
+  } catch (error: unknown) {
+    throw handleApiError(error, "Error fetching delivery company by ID");
+  }
 };
 
-
+// --- Obtener órdenes asociadas a una empresa de delivery ---
 export const fetchDeliveryOrderByDeliveryId = async (deliveryId: string) => {
-  const res = await axios.get(`/orders/delivery/${deliveryId}`);
-  return res.data;
+  try {
+    const res = await apiGet(`/orders/delivery/${deliveryId}`);
+    return res;
+  } catch (error: unknown) {
+    throw handleApiError(error, "Error fetching orders for delivery company");
+  }
 };
 
+// --- Actualizar una empresa de delivery ---
 export const updateDeliveryCompany = async (
   id: string,
   data: Partial<DeliveryCompany>
 ) => {
-  const res = await axios.patch(`/delivery/companies/${id}`, data);
-  return res.data;
+  try {
+    const res = await apiPatch(`/delivery/companies/${id}`, data);
+    return res;
+  } catch (error: unknown) {
+    throw handleApiError(error, "Error updating delivery company");
+  }
 };

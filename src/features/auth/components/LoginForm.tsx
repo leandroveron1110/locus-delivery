@@ -7,6 +7,8 @@ import { loginSchema } from "../../../lib/zodSchemas"; // Importa el esquema de 
 import { LoginPayload } from "../types/auth";
 import { useLogin } from "../hooks/useLogin"; // Importa el hook de login
 import { Loader2 } from "lucide-react"; // Icono de carga
+import { useAlert } from "@/features/common/ui/Alert/Alert";
+import { getDisplayErrorMessage } from "@/lib/uiErrors";
 
 export const LoginForm = () => {
   // Inicializa React Hook Form con el esquema de Zod
@@ -14,19 +16,25 @@ export const LoginForm = () => {
     register,
     handleSubmit,
     formState: { errors },
-    reset, // Para resetear el formulario después de un envío
+    reset, 
   } = useForm<LoginPayload>({
-    resolver: zodResolver(loginSchema), // Usa zodResolver para la validación
+    resolver: zodResolver(loginSchema),
   });
 
-  // Usa el hook de login de React Query
   const { mutate: loginUser, isPending, isError, error } = useLogin();
+  const { addAlert } = useAlert();
 
-  // Función que se ejecuta al enviar el formulario
   const onSubmit = (data: LoginPayload) => {
     loginUser(data, {
       onSuccess: () => {
-        reset(); // Limpia el formulario al éxito
+        reset();
+      },
+      onError: (e) => {
+        reset();
+        addAlert({
+          message: getDisplayErrorMessage(e),
+          type: "error",
+        });
       },
     });
   };

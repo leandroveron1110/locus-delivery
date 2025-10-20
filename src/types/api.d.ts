@@ -21,9 +21,19 @@ export interface PaginationParams {
 }
 
 // Defines a generic structure for an API error response
-export interface ApiErrorResponse {
-  message: string; // Friendly error message
-  code?: string; // Internal error code (optional)
-  details?: any; // Additional error details (optional)
-  statusCode: number; // HTTP status code
+export interface ApiError {
+  statusCode: number;
+  message: string | string[];
+  contextMessage: string;
+  errorCode?: string; 
+  timestamp: string;
+  path: string;
 }
+
+export interface ApiResponse<T = unknown> {
+  data: T | null;
+  error: ApiError| null;
+  success: boolean;
+  timestamp: string;
+}
+

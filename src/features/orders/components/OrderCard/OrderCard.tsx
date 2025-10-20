@@ -1,11 +1,20 @@
 "use client";
 
 import React from "react";
-import { EOrderStatusDelivery, Order, OrderStatus, DeliveryType, PaymentMethodType } from "../../types/order";
+import {
+  EOrderStatusDelivery,
+  Order,
+  OrderStatus,
+  DeliveryType,
+  PaymentMethodType,
+} from "../../types/order";
 import OrderHeader from "./components/OrderHeader";
 import { fetchUpdateOrdersByOrderID } from "../../api/order-api";
 import { useDeliveryOrdersStore } from "../../stores/useDeliveryOrdersStore";
 import OrderStatusDeliveryButtons from "./components/OrderStatusDeliveryButtons";
+import { Copy } from "lucide-react";
+import { useAlert } from "@/features/common/ui/Alert/Alert";
+import { getDisplayErrorMessage } from "@/lib/uiErrors";
 
 interface Props {
   order: Order;
@@ -14,19 +23,9 @@ interface Props {
 export default function OrderCard({ order }: Props) {
   const updateOrderStatus = useDeliveryOrdersStore((s) => s.updateOrderStatus);
 
-  const {
-    paymentType,
-    deliveryType,
-    items,
-    bussiness,
-    total,
-    createdAt,
-    status,
-    id,
-    businessId,
-    paymentStatus,
-    paymentReceiptUrl,
-  } = order;
+  const { addAlert } = useAlert();
+
+  const { deliveryType, business, deliveryCompany, status } = order;
 
   // Función genérica para actualizar el estado de la orden
   const handleChangeStatus = async (
@@ -37,30 +36,32 @@ export default function OrderCard({ order }: Props) {
         order.id,
         newStatus
       );
-      updateOrderStatus(updatedOrder.id, updatedOrder.status);
+
+      if (updatedOrder) {
+        updateOrderStatus(updatedOrder.id, updatedOrder.status);
+      }
     } catch (error) {
-      console.error("Error cambiando el estado:", error);
+      addAlert({
+        message: `Hubo un error al cambiar el estado de la orden. ${getDisplayErrorMessage(
+          error
+        )} `,
+        type: "error",
+      });
     }
   };
 
-  // Condición para mostrar el precio al delivery
-  const showPrice =
-    deliveryType === DeliveryType.DELIVERY &&
-    paymentType === PaymentMethodType.CASH;
-
   return (
-    <div className="w-full max-w-lg mx-auto p-4 sm:p-6 rounded-xl bg-white shadow-sm">
-      <div className="flex justify-between items-center mb-3">
-        <p className="text-lg font-semibold">Orden #{order.id}</p>
-      </div>
-
+    <div className="w-full sm:max-w-md sm:mx-auto bg-[#f9f9ef] border border-gray-300 rounded-xl p-4 shadow-sm">
       <OrderHeader
-        businessName={bussiness.name}
-        businessAddress={bussiness.address}
+        orderId={order.id}
+        businessName={business.name}
+        businessAddress={business.address}
         deliveryType={deliveryType}
-        total={showPrice ? total : undefined} // solo mostrar total si corresponde
+        priceDeliveryTotal={deliveryCompany?.totalDelivery} // solo mostrar total si corresponde
+        priceOrderTotal={order.total}
         status={status}
-        businessPhone={bussiness.phone}
+        customerObservations={order.customerObservations || ""}
+        businessPhone={business.phone}
         userAddress={order.user.address || "Dirección no especificada"}
         userFullName={order.user.fullName}
         userPhone={order.user.phone}

@@ -58,7 +58,6 @@ export default function DeliveryProfile({ delivery }: Props) {
       });
     } catch (err) {
       setMessage({ type: "error", text: "Error al actualizar el perfil." });
-      console.error(err);
     } finally {
       setLoading(false);
     }
