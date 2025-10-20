@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { useAlert } from "@/features/common/ui/Alert/Alert";
 import { useFetchDeliveryOrders } from "../stores/useFetchDeliveryOrders";
 import { useDeliveryOrdersSocket } from "../socket/useDeliverySocket";
 import { useDeliveryOrdersStore } from "../stores/useDeliveryOrdersStore";
