@@ -3,15 +3,22 @@
 import { memo } from "react";
 import { Polygon, Tooltip } from "react-leaflet";
 import { IZone } from "../types/zone";
+import L from "leaflet"; // Necesario para evitar la propagación de eventos
 
 interface ZonePolygonProps {
   zone: IZone & { latlngs: [number, number][] };
   isEditing: boolean;
   editingZoneId?: string;
-  onClick: (zone: IZone) => void;
+  onDblClick: (zone: IZone) => void; 
 }
 
-const ZonePolygonComponent = ({ zone, isEditing, editingZoneId, onClick }: ZonePolygonProps) => {
+const ZonePolygonComponent = ({ 
+  zone, 
+  isEditing, 
+  editingZoneId, 
+  onDblClick 
+}: ZonePolygonProps) => {
+  
   // Determinar color según estado
   let color = "#2563eb"; // azul por defecto
   let weight = 2;
@@ -27,11 +34,27 @@ const ZonePolygonComponent = ({ zone, isEditing, editingZoneId, onClick }: ZoneP
     fillOpacity = 0.4;
   }
 
+  // Handler para el doble clic
+  const handleDblClick = () => {
+    onDblClick(zone);
+  };
+  
+  // Handler para el clic simple para detener la propagación si estamos dibujando
+  const handleClick = (e: L.LeafletMouseEvent) => {
+      // Detiene la propagación para evitar que el clic interfiera con otras acciones
+      // como la finalización de un dibujo, que es lo que buscabas.
+      L.DomEvent.stopPropagation(e);
+  };
+
   return (
     <Polygon
       positions={zone.latlngs}
       pathOptions={{ color, weight, fillOpacity }}
-      eventHandlers={{ click: () => onClick(zone) }}
+      eventHandlers={{ 
+        // ⚠️ CAMBIO CLAVE: Escuchamos el evento de doble clic
+        dblclick: handleDblClick,
+        click: handleClick, // Evitamos interferencia con clics
+      }}
     >
       <Tooltip sticky>
         <div className="text-sm">

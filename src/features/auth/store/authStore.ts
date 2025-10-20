@@ -26,12 +26,16 @@ const initialState: AuthState = {
   error: null,
 };
 
-// Crea el store de Zustand para la autenticación.
-// Ahora tipamos 'create' con AuthStore, que incluye tanto el estado como las acciones.
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return "Ocurrió un error desconocido.";
+}
+
 export const useAuthStore = create<AuthStore>()(
-  // <-- CAMBIO CLAVE AQUÍ: create<AuthStore>()
   persist(
-    (set, get) => ({
+    (set) => ({
       ...initialState, // Carga el estado inicial
 
       /**
@@ -51,43 +55,13 @@ export const useAuthStore = create<AuthStore>()(
             error: null,
           });
           return response.user; // Devuelve el usuario para uso en el componente
-        } catch (error: any) {
-          set({
-            ...initialState, // Resetea el estado a no autenticado
-            isLoading: false,
-            error:
-              error.message ||
-              "Error al iniciar sesión. Por favor, inténtalo de nuevo.",
-          });
-          throw error; // Re-lanza el error para que el componente que llama lo maneje
-        }
-      },
-
-      /**
-       * Registra un nuevo usuario.
-       * @param payload Datos del nuevo usuario.
-       */
-      register: async (response: RegisterResponse) => {
-        set({ isLoading: true, error: null });
-        try {
-          localStorage.setItem("authToken", response.accessToken);
-          set({
-            user: response.user,
-            token: response.accessToken,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null,
-          });
-          return response.user;
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
             ...initialState,
             isLoading: false,
-            error:
-              error.message ||
-              "Error al registrar usuario. Por favor, inténtalo de nuevo.",
+            error: getErrorMessage(error) || "Error al iniciar sesión.",
           });
-          throw error;
+          throw error; // 👈 dejamos que el componente decida qué hacer
         }
       },
 
@@ -121,7 +95,7 @@ export const useAuthStore = create<AuthStore>()(
             isLoading: false,
             error: null,
           });
-        } catch (error: any) {
+        } catch {
           localStorage.removeItem("authToken"); // Token inválido o expirado, lo eliminamos
           set({
             ...initialState,
@@ -139,17 +113,7 @@ export const useAuthStore = create<AuthStore>()(
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
-        // El token se maneja a través de localStorage.setItem/getItem en las acciones,
-        // y se reestablece en el store a través de checkAuth.
-        // No es necesario que 'persist' lo maneje directamente aquí si ya lo haces manualmente.
-        // Si quieres que 'persist' lo maneje, asegúrate de que el tipo 'token' sea compatible.
-        // Para simplificar y evitar problemas de serialización/deserialización con null,
-        // lo dejamos fuera del partialize, confiando en checkAuth.
       }),
-      // Para depuración, si quieres ver qué se guarda, puedes usar:
-      // getStorage: () => localStorage,
-      // serialize: (state) => JSON.stringify(state),
-      // deserialize: (str) => JSON.parse(str),
     }
   )
 );

@@ -1,6 +1,7 @@
 import { apiGet, apiPatch, ApiResult } from "@/lib/apiFetch";
 import { DeliveryCompany } from "../types/delivery";
 import { handleApiError } from "@/features/common/utils/handleApiError";
+import { Order } from "@/features/orders/types/order";
 
 // --- Obtener todas las empresas de delivery por dueño ---
 export const fetchDeliveriesByOwner = async (
@@ -32,9 +33,9 @@ export const fetchDeliveriesByDeliveryId = async (
 };
 
 // --- Obtener órdenes asociadas a una empresa de delivery ---
-export const fetchDeliveryOrderByDeliveryId = async (deliveryId: string) => {
+export const fetchDeliveryOrderByDeliveryId = async (deliveryId: string): Promise<ApiResult<Order[]>> => {
   try {
-    const res = await apiGet(`/orders/delivery/${deliveryId}`);
+    const res = await apiGet<Order[]>(`/orders/delivery/${deliveryId}`);
     return res;
   } catch (error: unknown) {
     throw handleApiError(error, "Error fetching orders for delivery company");

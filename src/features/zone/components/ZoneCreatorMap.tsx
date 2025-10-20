@@ -61,22 +61,34 @@ export const ZoneCreatorMap = ({
     setEditingZone(null);
   }, []);
 
-  const handleZoneClick = useCallback((z: IZone) => {
-    setEditingZone(z);
-    setDrawnFeature({
-      type: "Feature",
-      properties: {},
-      geometry: z.geometry,
-    });
-  }, []);
-
   const isCreating = !!drawnFeature && !editingZone;
   const isEditing = !!editingZone;
 
+  // 1. ✏️ MODIFICACIÓN CLAVE: Renombrado a handleZoneDblClick
+  // Añadimos 'isCreating' a las dependencias.
+  const handleZoneDblClick = useCallback(
+    (z: IZone) => {
+      // 💡 Lógica UX: Solo iniciar la edición si NO estamos creando una zona.
+      if (isCreating) {
+        console.log("Ya estás creando una zona. Finaliza o cancela primero.");
+        return;
+      }
+
+      setEditingZone(z);
+      setDrawnFeature({
+        type: "Feature",
+        properties: {},
+        geometry: z.geometry,
+      });
+    },
+    [isCreating]
+  ); // Dependencia 'isCreating' para que el callback sepa el estado actual.
+
   const newZonePositions = useMemo(() => {
     if (!drawnFeature) return [];
+    // Nota: El tipo 'DrawnFeature' (GeoJSON Polygon) tiene una estructura de coordenadas [ [ [lng, lat], ... ] ]
     return drawnFeature.geometry.coordinates[0].map(
-      (coord) => [coord[1], coord[0]] as [number, number]
+      (coord) => [coord[1], coord[0]] as [number, number] // Conversión de [lng, lat] a [lat, lng]
     );
   }, [drawnFeature]);
 
@@ -108,7 +120,8 @@ export const ZoneCreatorMap = ({
               zone={zone}
               isEditing={isEditing}
               editingZoneId={editingZone?.id}
-              onClick={handleZoneClick}
+              // 2. 🖱️ MODIFICACIÓN CLAVE: Cambiado de onClick a onDblClick
+              onDblClick={handleZoneDblClick}
             />
           ))}
 

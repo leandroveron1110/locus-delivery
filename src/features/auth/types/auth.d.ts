@@ -59,7 +59,6 @@ export interface AuthState {
 // NUEVA INTERFAZ: Define los tipos para las acciones (funciones) del store
 export interface AuthStoreActions {
   login: (payload: LoginResponse) => Promise<User>;
-  register: (payload: RegisterResponse) => Promise<User>;
   logout: () => void;
   checkAuth: () => Promise<void>;
 }

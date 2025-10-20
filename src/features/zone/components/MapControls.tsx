@@ -53,7 +53,7 @@ export const MapControls = ({
       drawRectangle: true, // ✅ Dibujar Rectángulo
       
       // Controles de Edición y Borrado (Desactivados temporalmente)
-      editMode: false, // ❌ Desactivado por ahora
+      editMode: true, // ❌ Desactivado por ahora
       cutPolygon: false, // ❌ Desactivado por ahora
       
       // Borrar todas las capas dibujadas

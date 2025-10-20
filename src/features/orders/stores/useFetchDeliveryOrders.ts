@@ -15,6 +15,10 @@ export function useFetchDeliveryOrders(businessId: string) {
   const fetch = async () => {
     const res = await fetchDeliveryOrderByDeliveryId(businessId);
 
-    res.forEach((order: any) => addOrder(order));
+    if(res) {
+      res.forEach((order) => addOrder(order));
+
+    }
+
   };
 }
