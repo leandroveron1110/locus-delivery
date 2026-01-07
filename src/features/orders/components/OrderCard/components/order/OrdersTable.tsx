@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Store, Truck, Copy, Check } from "lucide-react";
+import { MapPin, Store, Truck, Copy } from "lucide-react";
 import { Order, OrderStatus } from "@/features/orders/types/order";
 import { useAlert } from "@/features/common/ui/Alert/Alert";
 import { getDisplayErrorMessage } from "@/lib/uiErrors";

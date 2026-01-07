@@ -14,7 +14,6 @@ import {
 import { simplifiedFilters } from "@/features/common/utils/filtersData";
 import OrdersFilters from "./OrdersFilters";
 import { Search } from "lucide-react";
-import OrderCard from "./OrderCard/OrderCard";
 import OrdersTable from "./OrderCard/components/order/OrdersTable";
 
 interface Props {
