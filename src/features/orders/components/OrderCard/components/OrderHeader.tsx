@@ -34,11 +34,11 @@ interface Props {
   priceDeliveryTotal?: string;
   priceOrderTotal?: string;
   status: OrderStatus;
-  paymentType: PaymentMethodType;
+  orderPaymentMethod: PaymentMethodType;
 }
 
-const getPaymentInfo = (paymentType: PaymentMethodType) => {
-  switch (paymentType) {
+const getPaymentInfo = (orderPaymentMethod: PaymentMethodType) => {
+  switch (orderPaymentMethod) {
     case PaymentMethodType.CASH:
       return {
         icon: <DollarSign className="w-4 h-4 text-green-600" />,
@@ -74,7 +74,7 @@ export default function DeliveryOrderHeader({
   userAddress,
   priceDeliveryTotal,
   status,
-  paymentType,
+  orderPaymentMethod,
 }: Props) {
   const [copied, setCopied] = useState(false);
 
@@ -85,7 +85,7 @@ export default function DeliveryOrderHeader({
     userAddress
   )}`;
 
-  const paymentInfo = getPaymentInfo(paymentType);
+  const paymentInfo = getPaymentInfo(orderPaymentMethod);
   const totalToCharge =
     (Number(priceDeliveryTotal) || 0) + (Number(priceOrderTotal) || 0);
 
@@ -94,8 +94,8 @@ export default function DeliveryOrderHeader({
   const labelClass = "text-sm text-gray-500 flex items-center gap-1";
 
   const generateWhatsappMessage = () => {
-    const isCash = paymentType === PaymentMethodType.CASH;
-    const isTransfer = paymentType === PaymentMethodType.TRANSFER;
+    const isCash = orderPaymentMethod === PaymentMethodType.CASH;
+    const isTransfer = orderPaymentMethod === PaymentMethodType.TRANSFER;
 
     let paymentDetail = "";
     const businessObs = businessObservations?.trim()
@@ -188,7 +188,7 @@ ${customerObs}`.trim();
           </span>
         </div>
 
-        {paymentType === PaymentMethodType.CASH && (
+        {orderPaymentMethod === PaymentMethodType.CASH && (
           <>
             <div className={infoRowClass}>
               <p className={labelClass}>

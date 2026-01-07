@@ -17,7 +17,7 @@ import { OrderStatus, PaymentMethodType, PaymentStatus } from "@/features/orders
 interface Props {
   status: OrderStatus;
   paymentStatus?: PaymentStatus;
-  paymentType?: PaymentMethodType;
+  orderPaymentMethod?: PaymentMethodType;
 }
 
 const statusMap: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
@@ -97,10 +97,10 @@ const statusMap: Record<string, { label: string; color: string; Icon: React.Elem
 export default function OrderStatusBadge({
   status,
   paymentStatus,
-  paymentType,
+  orderPaymentMethod,
 }: Props) {
   // Lógica específica para estados de pago por transferencia
-  if (paymentType === PaymentMethodType.TRANSFER) {
+  if (orderPaymentMethod === PaymentMethodType.TRANSFER) {
     if (paymentStatus === PaymentStatus.PENDING) {
       return (
         <span
@@ -126,7 +126,7 @@ export default function OrderStatusBadge({
   }
 
   // Lógica para estado de pago en efectivo
-  if (paymentType === PaymentMethodType.CASH && status === OrderStatus.PENDING) {
+  if (orderPaymentMethod === PaymentMethodType.CASH && status === OrderStatus.PENDING) {
     return (
       <span
         className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-medium rounded-full bg-gray-200 text-gray-700"

@@ -15,6 +15,7 @@ import { simplifiedFilters } from "@/features/common/utils/filtersData";
 import OrdersFilters from "./OrdersFilters";
 import { Search } from "lucide-react";
 import OrderCard from "./OrderCard/OrderCard";
+import OrdersTable from "./OrderCard/components/order/OrdersTable";
 
 interface Props {
   deliveryId: string;
@@ -30,9 +31,9 @@ export default function BusinessOrdersPage({ deliveryId }: Props) {
 
   // Filtra órdenes según método de pago y su estado
   const filterOrdersView = (order: Order) => {
-    if (order.paymentType === PaymentMethodType.CASH) return true;
+    if (order.orderPaymentMethod === PaymentMethodType.CASH) return true;
     if (
-      order.paymentType === PaymentMethodType.TRANSFER &&
+      order.orderPaymentMethod === PaymentMethodType.TRANSFER &&
       order.paymentStatus !== PaymentStatus.PENDING &&
       order.paymentStatus !== PaymentStatus.REJECTED
     )
@@ -44,13 +45,13 @@ export default function BusinessOrdersPage({ deliveryId }: Props) {
   const getOrderPriority = (order: Order) => {
     // Amarillo → Pago pendiente / en revisión
     if (
-      order.paymentType == PaymentMethodType.CASH &&
+      order.orderPaymentMethod == PaymentMethodType.CASH &&
       order.status == OrderStatus.PENDING
     ) {
       return 1;
     }
     if (
-      order.paymentType === PaymentMethodType.TRANSFER &&
+      order.orderPaymentMethod === PaymentMethodType.TRANSFER &&
       (order.paymentStatus === PaymentStatus.PENDING ||
         order.paymentStatus === PaymentStatus.IN_PROGRESS)
     )
@@ -84,6 +85,7 @@ export default function BusinessOrdersPage({ deliveryId }: Props) {
 
   const filteredAndSortedOrders = useMemo(() => {
     if (!orders) return [];
+
 
     // Aplica quick filter activo
     const currentFilter = simplifiedFilters.find(
@@ -151,20 +153,19 @@ export default function BusinessOrdersPage({ deliveryId }: Props) {
         </div>
       </div>
 
-      {/* Lista de órdenes */}
-      {filteredAndSortedOrders.length === 0 ? (
-        <div className="text-center p-8 bg-white rounded-xl shadow-sm border border-gray-200">
-          <p className="text-gray-500 text-lg">
-            No se encontraron órdenes para este negocio.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 p-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {filteredAndSortedOrders.map((order) => (
-            <OrderCard key={order.id} order={order} />
-          ))}
-        </div>
-      )}
+{/* Lista de órdenes */}
+{filteredAndSortedOrders.length === 0 ? (
+  <div className="text-center p-8 bg-white rounded-xl shadow-sm border border-gray-200">
+    <p className="text-gray-500 text-lg">
+      No se encontraron órdenes para este negocio.
+    </p>
+  </div>
+) : (
+  <div className="p-3">
+    <OrdersTable orders={filteredAndSortedOrders} />
+  </div>
+)}
+
     </div>
   );
 }

@@ -54,7 +54,7 @@ export default function OrderCard({ order }: Props) {
         businessName={business.name}
         businessAddress={business.address}
         deliveryType={deliveryType}
-        priceDeliveryTotal={deliveryCompany?.totalDelivery} // solo mostrar total si corresponde
+        priceDeliveryTotal={deliveryCompany?.totalDeliveryCost} // solo mostrar total si corresponde
         priceOrderTotal={order.total}
         status={status}
         customerObservations={order.customerObservations || ""}
@@ -62,7 +62,7 @@ export default function OrderCard({ order }: Props) {
         userAddress={order.user.address || "Dirección no especificada"}
         userFullName={order.user.fullName}
         userPhone={order.user.phone}
-        paymentType={order.paymentType}
+        orderPaymentMethod={order.orderPaymentMethod}
       />
 
       {/* Botones del delivery */}

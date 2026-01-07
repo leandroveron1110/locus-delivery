@@ -55,7 +55,7 @@ export interface OrderDiscount {
 export interface IDeliveryCompany {
   name: string;
   phone: string;
-  totalDelivery: string;
+  totalDeliveryCost: string;
 }
 
 export interface Order {
@@ -72,7 +72,7 @@ export interface Order {
   updatedAt: string; // ISO string
   deliveryType: DeliveryType;
   deliveryCompany: IDeliveryCompany | null;
-  paymentType: PaymentMethodType;
+  orderPaymentMethod: PaymentMethodType;
   paymentStatus: PaymentStatus;
   paymentReceiptUrl?: string | null;
   paymentInstructions?: string | null;

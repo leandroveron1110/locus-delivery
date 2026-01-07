@@ -14,7 +14,7 @@ export default function OrderStatusDeliveryButtons({
 
   switch (status) {
     // Delivery recibe la orden pendiente
-    case OrderStatus.READY_FOR_DELIVERY_PICKUP:
+    case OrderStatus.READY_FOR_DELIVERY_PICKUP || OrderStatus.COMPLETED || OrderStatus.CONFIRMED:
       return (
         <div className="flex gap-2 flex-wrap">
           <button

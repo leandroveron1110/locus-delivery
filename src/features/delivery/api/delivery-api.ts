@@ -36,6 +36,7 @@ export const fetchDeliveriesByDeliveryId = async (
 export const fetchDeliveryOrderByDeliveryId = async (deliveryId: string): Promise<ApiResult<Order[]>> => {
   try {
     const res = await apiGet<Order[]>(`/orders/delivery/${deliveryId}`);
+    console.log(res)
     return res;
   } catch (error: unknown) {
     throw handleApiError(error, "Error fetching orders for delivery company");
