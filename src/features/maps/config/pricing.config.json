@@ -1,0 +1,29 @@
+{
+  "currency": "ARS",
+  "base": {
+    "price": 2000,
+    "maxKm": 1.5
+  },
+  "segments": [
+    {
+      "fromKm": 1.5,
+      "toKm": 4,
+      "pricePerKm": 800
+    },
+    {
+      "fromKm": 4,
+      "toKm": 10,
+      "pricePerKm": 500
+    },
+    {
+      "fromKm": 10,
+      "toKm": 20,
+      "pricePerKm": 450
+    },
+    {
+      "fromKm": 20,
+      "toKm": null,
+      "pricePerKm": 400
+    }
+  ]
+}

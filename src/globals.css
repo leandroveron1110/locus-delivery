@@ -1,0 +1,23 @@
+.btn-primary {
+  @apply w-full px-4 py-2 rounded-lg
+  bg-blue-600 text-white font-semibold
+  hover:bg-blue-700 transition;
+}
+
+.btn-success {
+  @apply w-full px-4 py-2 rounded-lg
+  bg-green-600 text-white font-semibold
+  hover:bg-green-700 transition;
+}
+
+.btn-warning {
+  @apply w-full px-4 py-2 rounded-lg
+  bg-yellow-400 text-gray-900 font-semibold
+  hover:bg-yellow-500 transition;
+}
+
+.btn-danger-outline {
+  @apply w-full px-4 py-2 rounded-lg
+  border border-red-300 text-red-600 font-semibold
+  hover:bg-red-50 transition;
+}
