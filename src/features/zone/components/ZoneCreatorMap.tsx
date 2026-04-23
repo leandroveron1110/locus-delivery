@@ -34,6 +34,7 @@ L.Icon.Default.mergeOptions({
 
 interface ZoneCreatorMapProps {
   zones: IZone[] | undefined;
+  macroZones?: { id: string; name: string }[];
   onZoneCreated: (zone: Zone) => void;
   onZoneEdited: (zone: Partial<IZone>) => void;
   onZoneDeleted: (zoneId: string) => void;
@@ -45,6 +46,7 @@ const initialCenter: [number, number] = [-32.483, -58.233];
 
 export const ZoneCreatorMap = ({
   zones,
+  macroZones,
   onZoneCreated,
   onZoneEdited,
   onZoneDeleted,
@@ -118,6 +120,7 @@ export const ZoneCreatorMap = ({
             <ZonePolygon
               key={zone.id}
               zone={zone}
+              macroZones={macroZones ? macroZones : []}
               isEditing={isEditing}
               editingZoneId={editingZone?.id}
               // 2. 🖱️ MODIFICACIÓN CLAVE: Cambiado de onClick a onDblClick
@@ -161,6 +164,7 @@ export const ZoneCreatorMap = ({
               companyId={companyId}
               drawnFeature={drawnFeature}
               isLoading={isLoading}
+              macroZones={macroZones ? macroZones : []}
               onZoneCreated={(zone) => {
                 onZoneCreated(zone);
                 handleCancel();
@@ -172,6 +176,7 @@ export const ZoneCreatorMap = ({
             <EditZoneForm
               drawnFeature={drawnFeature as DrawnFeature}
               isLoading={isLoading}
+              macroZones={macroZones ? macroZones : []}
               onZoneDeleted={(id) => {
                 onZoneDeleted(id);
                 handleCancel();

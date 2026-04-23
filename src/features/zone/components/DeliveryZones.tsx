@@ -6,17 +6,18 @@ import {
   useCreateZone,
   useDeleteZone,
   useDeliveryCompanyZones,
+  useMacroZoneId,
   useUpdateZone,
 } from "../hooks/useDeliveries";
-import { IZone, Zone } from "../types/zone";
+import { IZone, MatrixZone, Zone } from "../types/zone";
 import Loader from "@/features/common/ui/Loader/Loader";
 
 const ZoneCreatorMap = dynamic(
   () =>
     import("@/features/zone/components/ZoneCreatorMap").then(
-      (mod) => mod.ZoneCreatorMap
+      (mod) => mod.ZoneCreatorMap,
     ),
-  { ssr: false }
+  { ssr: false },
 );
 interface DeliveryZonesProps {
   companyId: string;
@@ -30,6 +31,7 @@ export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
     error,
     isLoading: zonesLoading,
   } = useDeliveryCompanyZones(companyId);
+  const { data: macroZones, error: macroZoneError } = useMacroZoneId();
 
   const createZoneMutation = useCreateZone();
   const updateZoneMutation = useUpdateZone();
@@ -46,7 +48,6 @@ export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
     try {
       await createZoneMutation.mutateAsync({
         ...zone,
-        price: Number(zone.price),
         companyId,
       });
     } catch (err) {
@@ -87,6 +88,7 @@ export default function DeliveryZones({ companyId }: DeliveryZonesProps) {
     <div className="flex flex-col lg:flex-row w-full h-screen">
       <ZoneCreatorMap
         zones={zones ? zones : undefined}
+        macroZones={macroZones ? macroZones : undefined}
         onZoneCreated={handleZoneCreated}
         onZoneEdited={onZoneEdited}
         onZoneDeleted={onZoneDeleted}

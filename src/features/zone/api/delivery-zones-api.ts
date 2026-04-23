@@ -5,7 +5,7 @@ import {
   apiPost,
   ApiResult,
 } from "@/lib/apiFetch";
-import { IZone, Zone } from "../types/zone";
+import { IZone, MacroZone, MatrixZone, Zone } from "../types/zone";
 import { handleApiError } from "@/features/common/utils/handleApiError";
 
 // --- Métodos de la API ---
@@ -21,9 +21,18 @@ export const fetchDeliveryZonesByDeliveryCompanyId = async (
   }
 };
 
+export const fetchMacroZonesIds = async (): Promise<ApiResult<MacroZone[]>> => {
+  try {
+    const res = await apiGet<MacroZone[]>(`/admin/delivery-setup/macro-zones/ids`);
+    return res;
+  } catch (error: unknown) {
+    throw handleApiError(error, "Error fetching macro zones IDs");
+  }
+};
+
 export const fetchSaveDeliveryZoneByDeliveryCompanyId = async (zone: Zone) => {
   try {
-    const res = await apiPost(`/delivery-zones`, zone);
+    const res = await apiPost<string>(`/delivery-zones`, zone);
     return res;
   } catch (error: unknown) {
     throw handleApiError(error, "Error creating delivery zone");
@@ -42,6 +51,7 @@ export const fetchUpdateDeliveryZone = async (
     throw handleApiError(error, "Error updating delivery zone");
   }
 };
+
 
 // --- Eliminar una zona de entrega ---
 export const fetchDeleteDeliveryZone = async (id: string) => {
