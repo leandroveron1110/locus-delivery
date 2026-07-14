@@ -22,7 +22,6 @@ interface Props {
 
 export default function BusinessOrdersPage({ deliveryId }: Props) {
   useFetchDeliveryOrders(deliveryId);
-  useDeliveryOrdersSocket(deliveryId);
 
   const orders = useDeliveryOrdersStore((s) => s.orders as Order[]);
   const [searchTerm, setSearchTerm] = useState("");

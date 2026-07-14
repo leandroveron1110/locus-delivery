@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import BackButton from "@/features/common/ui/BackButton/BackButton";
 import Loader from "@/features/common/ui/Loader/Loader";
 import BusinessOrdersPage from "@/features/orders/components/BusinessOrdersPage";
+import { DeliveryCommandsPage } from "@/features/delivery-comman/DeliveryCommandsPage";
 
 export default function DeliveryOrdersPage() {
   const params = useParams<{ deliveryId: string }>();
@@ -23,8 +24,8 @@ export default function DeliveryOrdersPage() {
   return (
     <div className="w-full bg-gray-100">
       <BackButton />
-      <h1 className="text-2xl font-semibold mb-6">Órdenes para entregar</h1>
-      <BusinessOrdersPage deliveryId={deliveryId} />
+      <DeliveryCommandsPage />
+      {/* <BusinessOrdersPage deliveryId={deliveryId} /> */}
     </div>
   );
 }
