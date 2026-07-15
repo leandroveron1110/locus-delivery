@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useDeliveryCommands } from "./hooks/useDeliveryCommands";
-import { CommandTable } from "./components/CommandTable";
+import { CommandTable, CommandGroup } from "./components/CommandTable";
 import { QuoteModal } from "./components/QuoteModal";
 import { CommandFilters, Filter } from "./components/CommandFilters";
 import { OrderCommand } from "./types/delivery-command.types";
@@ -31,7 +31,7 @@ export const DeliveryCommandsPage: React.FC = () => {
     return counts;
   }, [commands]);
 
-  // 2. Comandos filtrados y ordenados por urgencia (los más viejos arriba)
+  // 2. Comandos filtrados y ordenados por urgencia (más viejos arriba)
   const filteredCommands = useMemo(() => {
     return [...commands]
       .filter((cmd) => {
@@ -44,7 +44,30 @@ export const DeliveryCommandsPage: React.FC = () => {
       );
   }, [commands, activeFilter]);
 
-  // Métricas rápidas
+  // 3. Agrupar comandos por Origen (Comercio / Negocio)
+  const groupedCommands = useMemo<CommandGroup[]>(() => {
+    const groups: Record<string, CommandGroup> = {};
+
+    filteredCommands.forEach((cmd) => {
+      const storeKey =
+        cmd.originName?.replace(/, Concepción Del Uruguay/i, "").trim() ||
+        "Comercio General";
+
+      if (!groups[storeKey]) {
+        groups[storeKey] = {
+          originName: storeKey,
+          originAddress: cmd.originAddress || undefined,
+          commands: [],
+        };
+      }
+
+      groups[storeKey].commands.push(cmd);
+    });
+
+    return Object.values(groups);
+  }, [filteredCommands]);
+
+  // Métricas rápidas de urgencia
   const criticalCount = useMemo(() => {
     const now = new Date().getTime();
     return commands.filter((cmd) => {
@@ -55,13 +78,11 @@ export const DeliveryCommandsPage: React.FC = () => {
   }, [commands]);
 
   const handleAcceptDispatch = async (commandId: string) => {
-    // API Call
     console.log("Aceptar despacho", commandId);
     // await refetch();
   };
 
   const handleSaveQuote = async (commandId: string, cost: number) => {
-    // API Call
     console.log("Guardar cotización", { commandId, cost });
     setSelectedQuoteCommand(null);
     // await refetch();
@@ -86,7 +107,7 @@ export const DeliveryCommandsPage: React.FC = () => {
   return (
     <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
       {/* HEADER DE COMANDO */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-black text-gray-900 tracking-tight">
@@ -98,7 +119,7 @@ export const DeliveryCommandsPage: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-gray-500 mt-0.5">
-            Monitoreo activo de solicitudes y asignaciones.
+            Monitoreo activo de solicitudes y asignaciones consolidadas por comercio.
           </p>
         </div>
 
@@ -112,7 +133,7 @@ export const DeliveryCommandsPage: React.FC = () => {
 
           <button
             // onClick={() => refetch()}
-            className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-all"
+            className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-all cursor-pointer"
           >
             🔄 Actualizar
           </button>
@@ -128,9 +149,9 @@ export const DeliveryCommandsPage: React.FC = () => {
         />
       </div>
 
-      {/* TABLA PRINCIPAL */}
+      {/* VISTA AGRUPADA */}
       <CommandTable
-        commands={filteredCommands}
+        groupedCommands={groupedCommands}
         onOpenQuoteModal={setSelectedQuoteCommand}
         onAcceptDispatch={handleAcceptDispatch}
       />
