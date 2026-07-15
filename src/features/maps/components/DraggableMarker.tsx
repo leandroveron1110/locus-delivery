@@ -5,17 +5,6 @@ import { useRef, useState, useMemo, useEffect } from "react";
 import { Marker, Popup } from "react-leaflet"; // 🔹 Eliminamos useMap (no se usa)
 import * as L from "leaflet";
 
-// Fix de íconos de Leaflet
-// @ts-expect-error - Leaflet type definitions don't include _getIconUrl, so we override it manually.
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
 
 interface DraggableMarkerProps {
   initialPosition: [number, number];
