@@ -1,9 +1,18 @@
+type DeliveryCommandStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "ERROR"
+  | "CANCELLED";
+
+type DeliveryCommandType = "QUOTE" | "DISPATCH" | "CANCEL"
+
 export interface OrderCommand {
   id: string;
   businessId: string;
   orderId: string;
-  command: 'DISPATCH' | 'QUOTE' | string;
-  status: 'PENDING' | 'COMPLETED' | 'FAILED' | string;
+  command: DeliveryCommandType;
+  status: DeliveryCommandStatus;
   originName: string | null;
   originAddress: string | null;
   originLatitude: number | null;
@@ -42,3 +51,10 @@ export interface ApiResponse<T> {
 }
 
 export type OrderCommandListResponse = PaginatedData<OrderCommand>;
+
+export interface UpdateDeliveryCommandDto {
+  status: DeliveryCommandStatus;
+  quotedCost?: number;
+  externalId?: string;
+  failureReason?: string;
+}

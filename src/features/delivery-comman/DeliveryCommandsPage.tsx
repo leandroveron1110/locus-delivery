@@ -4,9 +4,11 @@ import { CommandTable, CommandGroup } from "./components/CommandTable";
 import { QuoteModal } from "./components/QuoteModal";
 import { CommandFilters, Filter } from "./components/CommandFilters";
 import { OrderCommand } from "./types/delivery-command.types";
+import { useUpdateDeliveryCommand } from "./hooks/useUpdateDeliveryCommand";
 
 export const DeliveryCommandsPage: React.FC = () => {
   const { commands, isLoading, error, refetch } = useDeliveryCommands();
+  const { mutate: updateCommand, isUpdating } = useUpdateDeliveryCommand();
 
   const [activeFilter, setActiveFilter] = useState<Filter>("PENDING");
   const [selectedQuoteCommand, setSelectedQuoteCommand] =
@@ -40,7 +42,7 @@ export const DeliveryCommandsPage: React.FC = () => {
       })
       .sort(
         (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       );
   }, [commands, activeFilter]);
 
@@ -78,14 +80,27 @@ export const DeliveryCommandsPage: React.FC = () => {
   }, [commands]);
 
   const handleAcceptDispatch = async (commandId: string) => {
-    console.log("Aceptar despacho", commandId);
-    // await refetch();
+    try {
+      await updateCommand(commandId, {
+        status: "PROCESSING",
+      });
+      refetch(1); // Refrescar la lista después de aceptar
+    } catch (err) {
+      console.error("No se pudo aceptar el despacho:", err);
+    }
   };
 
   const handleSaveQuote = async (commandId: string, cost: number) => {
-    console.log("Guardar cotización", { commandId, cost });
-    setSelectedQuoteCommand(null);
-    // await refetch();
+    try {
+      await updateCommand(commandId, {
+        status: "COMPLETED",
+        quotedCost: cost,
+      });
+      setSelectedQuoteCommand(null);
+      await refetch(1);
+    } catch (err) {
+      console.error("No se pudo guardar la cotización:", err);
+    }
   };
 
   if (isLoading) {
@@ -119,7 +134,8 @@ export const DeliveryCommandsPage: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-gray-500 mt-0.5">
-            Monitoreo activo de solicitudes y asignaciones consolidadas por comercio.
+            Monitoreo activo de solicitudes y asignaciones consolidadas por
+            comercio.
           </p>
         </div>
 
@@ -132,7 +148,7 @@ export const DeliveryCommandsPage: React.FC = () => {
           )}
 
           <button
-            // onClick={() => refetch()}
+            onClick={() => refetch(1)}
             className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-all cursor-pointer"
           >
             🔄 Actualizar

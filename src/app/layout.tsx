@@ -13,7 +13,7 @@ import { Providers } from "./providers";
 // });
 
 export const metadata: Metadata = {
-  title: "Logus",
+  title: "Hunay Delivery",
   description: "la plataforma de tu ciudad",
 };
 
