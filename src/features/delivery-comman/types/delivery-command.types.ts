@@ -53,7 +53,7 @@ export interface ApiResponse<T> {
 export type OrderCommandListResponse = PaginatedData<OrderCommand>;
 
 export interface UpdateDeliveryCommandDto {
-  status: DeliveryCommandStatus;
+  status?: DeliveryCommandStatus;
   quotedCost?: number;
   externalId?: string;
   failureReason?: string;

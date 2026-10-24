@@ -1,32 +1,18 @@
 import React, { useMemo, useState } from "react";
 import { useDeliveryCommands } from "./hooks/useDeliveryCommands";
-import {
-  CommandTable,
-  CommandGroup,
-} from "./components/CommandTable";
+import { CommandTable, CommandGroup } from "./components/CommandTable";
 import { QuoteModal } from "./components/QuoteModal";
-import {
-  CommandFilters,
-  Filter,
-} from "./components/CommandFilters";
+import { CommandFilters, Filter } from "./components/CommandFilters";
 import { OrderCommand } from "./types/delivery-command.types";
 import { useUpdateDeliveryCommand } from "./hooks/useUpdateDeliveryCommand";
+import { requestDeliveryDispatch } from "./api/delivery-commands.api";
 
 export const DeliveryCommandsPage: React.FC = () => {
-  const {
-    commands,
-    isLoading,
-    error,
-    refetch,
-  } = useDeliveryCommands();
+  const { commands, isLoading, error, refetch } = useDeliveryCommands();
 
-  const {
-    mutate: updateCommand,
-    isUpdating,
-  } = useUpdateDeliveryCommand();
+  const { mutate: updateCommand, isUpdating } = useUpdateDeliveryCommand();
 
-  const [activeFilter, setActiveFilter] =
-    useState<Filter>("PENDING");
+  const [activeFilter, setActiveFilter] = useState<Filter>("PENDING");
 
   // Comando que se está cotizando por primera vez
   const [selectedQuoteCommand, setSelectedQuoteCommand] =
@@ -73,8 +59,7 @@ export const DeliveryCommandsPage: React.FC = () => {
       })
       .sort(
         (a, b) =>
-          new Date(a.createdAt).getTime() -
-          new Date(b.createdAt).getTime(),
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       );
   }, [commands, activeFilter]);
 
@@ -87,15 +72,13 @@ export const DeliveryCommandsPage: React.FC = () => {
 
     filteredCommands.forEach((cmd) => {
       const storeKey =
-        cmd.originName
-          ?.replace(/, Concepción Del Uruguay/i, "")
-          .trim() || "Comercio General";
+        cmd.originName?.replace(/, Concepción Del Uruguay/i, "").trim() ||
+        "Comercio General";
 
       if (!groups[storeKey]) {
         groups[storeKey] = {
           originName: storeKey,
-          originAddress:
-            cmd.originAddress || undefined,
+          originAddress: cmd.originAddress || undefined,
           commands: [],
         };
       }
@@ -118,8 +101,7 @@ export const DeliveryCommandsPage: React.FC = () => {
         return false;
       }
 
-      const diffMins =
-        (now - new Date(cmd.createdAt).getTime()) / 60000;
+      const diffMins = (now - new Date(cmd.createdAt).getTime()) / 60000;
 
       return diffMins >= 15;
     }).length;
@@ -129,9 +111,7 @@ export const DeliveryCommandsPage: React.FC = () => {
   // ACEPTAR DESPACHO
   // ==========================================================================
 
-  const handleAcceptDispatch = async (
-    commandId: string,
-  ) => {
+  const handleAcceptDispatch = async (commandId: string) => {
     try {
       await updateCommand(commandId, {
         status: "PROCESSING",
@@ -139,10 +119,7 @@ export const DeliveryCommandsPage: React.FC = () => {
 
       await refetch(1);
     } catch (err) {
-      console.error(
-        "No se pudo aceptar el despacho:",
-        err,
-      );
+      console.error("No se pudo aceptar el despacho:", err);
     }
   };
 
@@ -154,24 +131,30 @@ export const DeliveryCommandsPage: React.FC = () => {
   // Por eso cambia PENDING → COMPLETED.
   //
 
-  const handleSaveQuote = async (
-    commandId: string,
-    cost: number,
-  ) => {
+  const handleSaveQuote = async (commandId: string, cost: number) => {
     try {
-      await updateCommand(commandId, {
-        status: "COMPLETED",
-        quotedCost: cost,
-      });
+      const comm = commands.find((c) => c.id == commandId);
+      if (comm) {
+        console.log(comm)
+        if (comm.command === "DISPATCH") {
+          
+          await updateCommand(commandId, {
+            quotedCost: cost,
+          });
+        
+        } else {
+          await updateCommand(commandId, {
+            status: "COMPLETED",
+            quotedCost: cost,
+          });
+        }
 
-      setSelectedQuoteCommand(null);
+        setSelectedQuoteCommand(null);
 
-      await refetch(1);
+        await refetch(1);
+      }
     } catch (err) {
-      console.error(
-        "No se pudo guardar la cotización:",
-        err,
-      );
+      console.error("No se pudo guardar la cotización:", err);
     }
   };
 
@@ -183,33 +166,28 @@ export const DeliveryCommandsPage: React.FC = () => {
   // Solamente reemplazamos quotedCost.
   //
 
-  const handleSavePrice = async (
-    commandId: string,
-    cost: number,
-  ) => {
-    const command = commands.find(
-      (cmd) => cmd.id === commandId,
-    );
-
-    if (!command) {
-      console.error("No se encontró el comando.");
-      return;
-    }
-
+  const handleSavePrice = async (commandId: string, cost: number) => {
     try {
-      await updateCommand(commandId, {
-        status: command.status,
-        quotedCost: cost,
-      });
+      const comm = commands.find((c) => c.id == commandId);
+      if (comm) {
+        console.log(comm)
+        if (comm.command === "DISPATCH") {
+          await updateCommand(commandId, {
+            quotedCost: cost,
+          });
+        } else {
+          await updateCommand(commandId, {
+            status: "COMPLETED",
+            quotedCost: cost,
+          });
+        }
 
-      setSelectedPriceCommand(null);
+        setSelectedQuoteCommand(null);
 
-      await refetch(1);
+        await refetch(1);
+      }
     } catch (err) {
-      console.error(
-        "No se pudo actualizar el precio:",
-        err,
-      );
+      console.error("No se pudo guardar la cotización:", err);
     }
   };
 
@@ -243,7 +221,6 @@ export const DeliveryCommandsPage: React.FC = () => {
 
   return (
     <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
-
       {/* HEADER DE COMANDO */}
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
@@ -261,8 +238,8 @@ export const DeliveryCommandsPage: React.FC = () => {
           </div>
 
           <p className="text-xs text-gray-500 mt-0.5">
-            Monitoreo activo de solicitudes y asignaciones
-            consolidadas por comercio.
+            Monitoreo activo de solicitudes y asignaciones consolidadas por
+            comercio.
           </p>
         </div>
 
@@ -271,9 +248,7 @@ export const DeliveryCommandsPage: React.FC = () => {
         <div className="flex items-center gap-3">
           {criticalCount > 0 && (
             <div className="px-3.5 py-1.5 rounded-xl bg-red-100 text-red-800 border border-red-200 font-extrabold text-xs flex items-center gap-1.5 animate-pulse">
-              <span>
-                {criticalCount} Críticos (&gt;15 min)
-              </span>
+              <span>{criticalCount} Críticos (&gt;15 min)</span>
             </div>
           )}
 
@@ -313,9 +288,7 @@ export const DeliveryCommandsPage: React.FC = () => {
       {selectedQuoteCommand && (
         <QuoteModal
           command={selectedQuoteCommand}
-          onClose={() =>
-            setSelectedQuoteCommand(null)
-          }
+          onClose={() => setSelectedQuoteCommand(null)}
           onSubmit={handleSaveQuote}
         />
       )}
@@ -327,9 +300,7 @@ export const DeliveryCommandsPage: React.FC = () => {
       {selectedPriceCommand && (
         <QuoteModal
           command={selectedPriceCommand}
-          onClose={() =>
-            setSelectedPriceCommand(null)
-          }
+          onClose={() => setSelectedPriceCommand(null)}
           onSubmit={handleSavePrice}
         />
       )}
