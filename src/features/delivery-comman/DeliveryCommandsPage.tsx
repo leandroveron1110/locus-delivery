@@ -31,7 +31,7 @@ export const DeliveryCommandsPage: React.FC = () => {
       PENDING: 0,
       PROCESSING: 0,
       COMPLETED: 0,
-      FAILED: 0,
+      CANCELLED: 0,
       ALL: commands.length,
     };
 

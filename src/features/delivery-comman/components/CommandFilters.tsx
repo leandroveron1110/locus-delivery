@@ -1,6 +1,6 @@
 import React from "react";
 
-export type Filter = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "ALL";
+export type Filter = "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED" | "ALL";
 
 interface Props {
   value: Filter;
@@ -12,7 +12,7 @@ const filters: { value: Filter; label: string }[] = [
   { value: "PENDING", label: "Pendientes" },
   { value: "PROCESSING", label: "En Proceso" },
   { value: "COMPLETED", label: "Completados" },
-  { value: "FAILED", label: "Fallidos" },
+  { value: "CANCELLED", label: "Fallidos" },
   { value: "ALL", label: "Todos" },
 ];
 
