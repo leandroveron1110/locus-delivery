@@ -24,7 +24,7 @@ export default function DeliveryOrdersPage() {
   return (
     <div className="w-full bg-gray-100">
       <BackButton />
-      <BusinessOrdersPage deliveryId={deliveryId} />
+      <DeliveryCommandsPage />
     </div>
   );
 }
