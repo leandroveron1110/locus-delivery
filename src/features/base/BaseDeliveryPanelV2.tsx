@@ -38,12 +38,6 @@ function getErrorMessage(error: unknown): string {
     : "Ocurrió un error inesperado.";
 }
 
-function getAddress(
-  value: string | null | undefined,
-  fallback: string,
-): string {
-  return cleanDeliveryAddress(value, fallback);
-}
 
 export default function BaseDeliveryPanelV2({
   zoneId,

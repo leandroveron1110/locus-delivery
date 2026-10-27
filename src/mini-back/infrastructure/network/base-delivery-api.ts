@@ -77,6 +77,14 @@ export interface BaseUrgentQuote {
   businessStatus: BusinessCommandStatusV2;
   logisticsStatus: LogisticsCommandStatusV2;
 
+  destinationLatitude: string | null;
+  destinationLongitude: string | null;
+  originLatitude: string | null;
+  originLongitude: string | null;
+
+
+  isShareable: boolean;
+
   createdAt: string;
   updatedAt?: string;
 }
@@ -92,6 +100,10 @@ export interface BasePendingDispatch {
   originName: string | null;
   originAddress: string | null;
   destinationAddress: string | null;
+  destinationLatitude: string | null;
+  destinationLongitude: string | null;
+  originLatitude: string | null;
+  originLongitude: string | null;
 
   quotedCost: number | null;
 
