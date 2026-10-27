@@ -5,19 +5,20 @@ import {
   Check,
   Clock3,
   FileText,
-  MapPin,
   Navigation,
   Pencil,
   Truck,
   UsersRound,
   PackageCheck,
   PackageX,
-  CircleHelp,
   Copy,
+  CheckCheck,
+  MapPinOff,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
+  LogisticsCommandStatusV2,
   type BasePendingDispatch,
   type BaseUrgentQuote,
 } from "@/mini-back/infrastructure/network/base-delivery-api";
@@ -25,6 +26,7 @@ import {
 import { formatARS } from "@/utils/currency";
 import { getElapsedTime } from "@/utils/date";
 import { cleanDeliveryAddress } from "@/utils/clean-delivery-address";
+import { GeoPickerModal } from "./GeoPickerModal"; // <--- Importamos el componente separado
 
 type QuoteCommand = BaseUrgentQuote | BasePendingDispatch;
 type CopyTarget = "destination" | "notes" | "all";
@@ -33,10 +35,52 @@ interface CommandRowProps {
   command: QuoteCommand;
   isQuote: boolean;
   showOriginDetail?: boolean;
-  accepting: boolean;
+  actionLoading?: boolean;
   onQuote: (command: QuoteCommand, mode: "create" | "edit") => void;
   onAcceptDispatch: (command: BasePendingDispatch) => void;
+  onCompleteDispatch?: (command: BasePendingDispatch) => void;
+  onSaveDestinationCoords: (
+    commandId: string,
+    lat: number,
+    lng: number,
+    address: string
+  ) => void;
 }
+
+type StatusPresentation = {
+  label: string;
+  className: string;
+};
+
+const LOGISTICS_STATUS_PRESENTATION: Record<
+  LogisticsCommandStatusV2,
+  StatusPresentation
+> = {
+  [LogisticsCommandStatusV2.PENDING]: {
+    label: "Pendiente",
+    className: "bg-slate-100 text-slate-700",
+  },
+  [LogisticsCommandStatusV2.QUOTED]: {
+    label: "Cotizado",
+    className: "bg-blue-100 text-blue-800",
+  },
+  [LogisticsCommandStatusV2.ACCEPTED]: {
+    label: "Aceptado",
+    className: "bg-indigo-100 text-indigo-800",
+  },
+  [LogisticsCommandStatusV2.IN_TRANSIT]: {
+    label: "En camino",
+    className: "bg-amber-100 text-amber-800",
+  },
+  [LogisticsCommandStatusV2.COMPLETED]: {
+    label: "Completado",
+    className: "bg-emerald-100 text-emerald-800",
+  },
+  [LogisticsCommandStatusV2.REJECTED]: {
+    label: "Rechazado",
+    className: "bg-red-100 text-red-800",
+  },
+};
 
 function cleanLocalText(
   value: string | null | undefined,
@@ -63,15 +107,23 @@ function getDestination(command: QuoteCommand): string {
   return cleanLocalText(command.destinationAddress, "Sin destino");
 }
 
-function getRequiredCouriers(command: QuoteCommand): number | null {
-  if (!("requiredCouriers" in command)) return null;
+function getRequiredCouriers(command: QuoteCommand): number {
+  if (!("requiredCouriers" in command)) return 1;
   const count = command.requiredCouriers;
-  return typeof count === "number" && Number.isFinite(count) && count > 0 ? count : null;
+  return typeof count === "number" && Number.isFinite(count) && count > 0
+    ? count
+    : 1;
 }
 
-function getIsShareable(command: QuoteCommand): boolean | null {
-  if (!("isShareable" in command)) return null;
-  return typeof command.isShareable === "boolean" ? command.isShareable : null;
+function getIsShareable(command: QuoteCommand): boolean {
+  if (!("isShareable" in command)) return false;
+  return typeof command.isShareable === "boolean" ? command.isShareable : false;
+}
+
+function hasValidCoords(command: QuoteCommand): boolean {
+  const lat = (command as any).destinationLatitude;
+  const lng = (command as any).destinationLongitude;
+  return lat != null && lng != null && String(lat) !== "" && String(lng) !== "";
 }
 
 async function copyText(text: string): Promise<boolean> {
@@ -91,14 +143,12 @@ function getTravelSummary(command: QuoteCommand): string {
   return [
     `RETIRO: ${getOrigin(command)} (${getOriginAddress(command)})`,
     `DESTINO: ${getDestination(command)}`,
-    requiredCouriers !== null ? `CADETES REQUERIDOS: ${requiredCouriers}` : "",
-    isShareable === true
-      ? "CAJA COMPARTIBLE: Sí"
-      : isShareable === false
-        ? "CAJA COMPARTIBLE: No"
-        : "CAJA COMPARTIBLE: No informado",
+    `CADETES REQUERIDOS: ${requiredCouriers}`,
+    `CAJA COMPARTIBLE: ${isShareable ? "Sí" : "No"}`,
     notes ? `NOTA: ${notes}` : "",
-    command.quotedCost != null ? `COSTO: ${formatARS(command.quotedCost)}` : "COSTO: Pendiente",
+    command.quotedCost != null
+      ? `COSTO: ${formatARS(command.quotedCost)}`
+      : "COSTO: Pendiente",
   ]
     .filter(Boolean)
     .join("\n");
@@ -108,18 +158,28 @@ export function CommandRow({
   command,
   isQuote,
   showOriginDetail = false,
-  accepting,
+  actionLoading = false,
   onQuote,
   onAcceptDispatch,
+  onCompleteDispatch,
+  onSaveDestinationCoords,
 }: CommandRowProps) {
   const [copiedTarget, setCopiedTarget] = useState<CopyTarget | null>(null);
   const [copyError, setCopyError] = useState(false);
+  const [isGeoModalOpen, setIsGeoModalOpen] = useState(false);
 
   const notes = getCommandNotes(command);
   const destination = getDestination(command);
   const requiredCouriers = getRequiredCouriers(command);
   const isShareable = getIsShareable(command);
   const hasPrice = command.quotedCost != null;
+  const hasCoords = hasValidCoords(command);
+
+  const logisticsStatus =
+    command.logisticsStatus ?? LogisticsCommandStatusV2.PENDING;
+  const statusInfo =
+    LOGISTICS_STATUS_PRESENTATION[logisticsStatus] ||
+    LOGISTICS_STATUS_PRESENTATION[LogisticsCommandStatusV2.PENDING];
 
   const elapsedTime = getElapsedTime(command.createdAt);
   const isCritical = elapsedTime.minutes >= 15;
@@ -134,7 +194,7 @@ export function CommandRow({
     return () => window.clearTimeout(timeoutId);
   }, [copiedTarget, copyError]);
 
-  const handleCopy = async (text: string, target: CopyTarget): Promise<void> => {
+  const handleCopy = async (text: string, target: CopyTarget) => {
     setCopyError(false);
     setCopiedTarget(null);
     const success = await copyText(text);
@@ -146,197 +206,244 @@ export function CommandRow({
     onQuote(command, hasPrice ? "edit" : "create");
   };
 
-  const handleAccept = () => {
-    if (isQuote || accepting) return;
-    onAcceptDispatch(command as BasePendingDispatch);
-  };
-
   return (
-    <tr className="group border-b border-slate-100 transition-colors last:border-b-0 hover:bg-slate-50/80">
-      {/* Metadatos agrupados */}
-      <td className="whitespace-nowrap px-3 py-2.5 align-middle">
-        <div className="flex flex-col gap-1 items-start min-w-[130px]">
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`inline-flex items-center gap-1 text-xs font-bold tabular-nums rounded px-1.5 py-0.5 ${
-                isCritical
-                  ? "bg-red-50 text-red-700"
-                  : isWarning
-                    ? "bg-amber-50 text-amber-700"
-                    : "bg-slate-100 text-slate-600"
-              }`}
-            >
-              <Clock3 size={11} />
-              {elapsedTime.label}
-              {isCritical && <span className="text-[9px] uppercase">Urgente</span>}
-            </span>
-
-            <span
-              className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                isQuote
-                  ? "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200"
-                  : "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200"
-              }`}
-            >
-              {isQuote ? <ArrowDownLeft size={10} /> : <Truck size={10} />}
-              {isQuote ? "Cotización" : "Despacho"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium">
-            <span className="flex items-center gap-1">
-              <UsersRound size={12} className="text-slate-400" />
-              {requiredCouriers !== null ? (
-                <span>{requiredCouriers} {requiredCouriers === 1 ? "cadete" : "cadetes"}</span>
-              ) : (
-                <span className="text-slate-400">S/I</span>
-              )}
-            </span>
-
-            <span>•</span>
-
-            <span className="flex items-center gap-1">
-              {isShareable === true ? (
-                <span className="text-emerald-700 flex items-center gap-0.5" title="Caja compartible">
-                  <PackageCheck size={12} /> Comp.
-                </span>
-              ) : isShareable === false ? (
-                <span className="text-slate-500 flex items-center gap-0.5" title="No compartible">
-                  <PackageX size={12} /> Excl.
-                </span>
-              ) : (
-                <span className="text-slate-400" title="Caja no indicada">
-                  <CircleHelp size={12} /> S/I
-                </span>
-              )}
-            </span>
-          </div>
-        </div>
-      </td>
-
-      {/* Destino */}
-      <td className="min-w-[200px] max-w-[280px] px-3 py-2.5 align-middle">
-        <div
-          onClick={() => void handleCopy(cleanDeliveryAddress(destination), "destination")}
-          title="Hacer clic para copiar la dirección de destino"
-          className="flex items-start gap-2 cursor-pointer rounded p-1 -m-1 transition hover:bg-violet-50/60 group/dest"
-        >
-          <Navigation size={14} className="mt-0.5 shrink-0 text-violet-500 group-hover/dest:scale-110 transition-transform" />
-          <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 break-words text-sm font-semibold text-slate-800 group-hover/dest:text-violet-900">
-              {cleanDeliveryAddress(destination)}
-            </p>
-            
-            {showOriginDetail && (
-              <p className="text-[11px] text-amber-800 flex items-center gap-1 mt-0.5">
-                <MapPin size={10} /> Retiro: {getOriginAddress(command)}
-              </p>
-            )}
-
-            {copiedTarget === "destination" && (
-              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 mt-0.5">
-                <Check size={10} /> ¡Destino copiado!
+    <>
+      <tr className="group border-b border-slate-100 transition-colors hover:bg-slate-50/90">
+        {/* 1. ESTADO, TIEMPO, CADETES Y CAJA */}
+        <td className="whitespace-nowrap px-3 py-2 align-middle">
+          <div className="flex flex-col gap-1 min-w-[130px]">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-bold tabular-nums ${
+                  isCritical
+                    ? "bg-red-100 text-red-800 animate-pulse"
+                    : isWarning
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-slate-100 text-slate-700"
+                }`}
+              >
+                <Clock3 size={12} />
+                {elapsedTime.label}
               </span>
-            )}
-          </div>
-        </div>
-      </td>
 
-      {/* Nota */}
-      <td className="min-w-[130px] max-w-[180px] px-3 py-2.5 align-middle">
-        {notes ? (
-          <div
-            onClick={() => void handleCopy(notes, "notes")}
-            title="Hacer clic para copiar la nota"
-            className="flex max-w-full items-start gap-1.5 rounded-md px-2 py-1 text-xs text-amber-900 bg-amber-50/80 cursor-pointer transition hover:bg-amber-100 group/note"
-          >
-            <FileText size={12} className="mt-0.5 shrink-0 text-amber-600 group-hover/note:scale-110 transition-transform" />
-            <div className="min-w-0 flex-1">
-              <span className="line-clamp-2 break-words">{notes}</span>
-              {copiedTarget === "notes" && (
-                <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 mt-0.5">
-                  <Check size={10} /> ¡Nota copiada!
+              <span
+                className={`p-1 rounded ${
+                  isQuote
+                    ? "text-violet-700 bg-violet-50"
+                    : "text-blue-700 bg-blue-50"
+                }`}
+                title={isQuote ? "Cotización" : "Despacho"}
+              >
+                {isQuote ? <ArrowDownLeft size={12} /> : <Truck size={12} />}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 text-[11px] font-medium text-slate-600">
+              <span
+                className="flex items-center gap-1"
+                title={`${requiredCouriers} cadete(s)`}
+              >
+                <UsersRound size={12} className="text-slate-400" />
+                <span className="font-bold text-slate-800">
+                  {requiredCouriers}
                 </span>
-              )}
+                <span className="text-[10px] text-slate-500">
+                  {requiredCouriers === 1 ? "cad." : "cads."}
+                </span>
+              </span>
+
+              <span className="text-slate-300">•</span>
+
+              <span>
+                {isShareable ? (
+                  <span
+                    className="text-emerald-700 font-bold flex items-center gap-0.5 bg-emerald-50 px-1 rounded"
+                    title="Caja compartible"
+                  >
+                    <PackageCheck size={12} /> Comp.
+                  </span>
+                ) : (
+                  <span
+                    className="text-slate-500 flex items-center gap-0.5"
+                    title="No compartible (Exclusivo)"
+                  >
+                    <PackageX size={12} /> Excl.
+                  </span>
+                )}
+              </span>
             </div>
           </div>
-        ) : (
-          <span className="text-xs text-slate-300">—</span>
-        )}
-      </td>
+        </td>
 
-      {/* Precio */}
-      <td className="whitespace-nowrap px-3 py-2.5 align-middle">
-        {hasPrice ? (
-          <div>
-            <p className="text-sm font-bold tabular-nums text-slate-900">
-              {formatARS(command.quotedCost!)}
-            </p>
-            <span className="text-[10px] font-medium text-emerald-700">
-              Cotizado
-            </span>
-          </div>
-        ) : (
-          <div>
-            <p className="text-sm font-semibold text-amber-700">Pendiente</p>
-            <span className="text-[10px] text-slate-400">Sin precio</span>
-          </div>
-        )}
-      </td>
-
-      {/* Acciones con botones mejorados */}
-      <td className="sticky right-0 z-10 whitespace-nowrap border-l border-slate-100 bg-white px-3 py-2.5 align-middle shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.3)] group-hover:bg-slate-50">
-        <div className="flex items-center justify-end gap-2">
-          {/* Botón Copiar Todo */}
-          <button
-            type="button"
-            onClick={() => void handleCopy(getTravelSummary(command), "all")}
-            title="Copiar resumen completo del viaje"
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition shadow-sm ${
-              copiedTarget === "all"
-                ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-            }`}
-          >
-            {copiedTarget === "all" ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-          </button>
-
-          {/* Botón Cotizar / Corregir */}
-          <button
-            type="button"
-            onClick={handleQuote}
-            title={hasPrice ? "Corregir precio del viaje" : "Cotizar viaje"}
-            className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-bold shadow-sm transition ${
-              hasPrice
-                ? "border border-slate-200 bg-white text-slate-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
-                : "bg-violet-600 text-white hover:bg-violet-700"
-            }`}
-          >
-            <Pencil size={13} />
-            <span>{hasPrice ? "Corregir" : "Cotizar"}</span>
-          </button>
-
-          {/* Botón Aceptar Despacho */}
-          {!isQuote && (
+        {/* 2. DESTINO + ACCESO AL MAPA */}
+        <td className="max-w-[260px] px-3 py-2 align-middle">
+          <div className="flex items-start gap-1.5">
             <button
               type="button"
-              onClick={handleAccept}
-              disabled={accepting}
-              title="Aceptar despacho"
-              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => setIsGeoModalOpen(true)}
+              title={
+                hasCoords
+                  ? "Ubicación en mapa OK (Clic para ver/corregir)"
+                  : "⚠️ Sin geolocalización. Clic para buscar en mapa"
+              }
+              className={`mt-0.5 shrink-0 rounded p-0.5 transition ${
+                hasCoords
+                  ? "text-violet-600 hover:bg-violet-50"
+                  : "bg-amber-100 text-amber-700 hover:bg-amber-200 animate-bounce"
+              }`}
             >
-              <Check size={13} />
-              <span>{accepting ? "Aceptando..." : "Aceptar"}</span>
+              {hasCoords ? <Navigation size={13} /> : <MapPinOff size={13} />}
             </button>
-          )}
-        </div>
 
-        {copyError && (
-          <p className="mt-1 text-right text-[10px] text-red-600">
-            Error al copiar
-          </p>
-        )}
-      </td>
-    </tr>
+            <div className="min-w-0 flex-1">
+              <div
+                onClick={() =>
+                  void handleCopy(
+                    cleanDeliveryAddress(destination),
+                    "destination",
+                  )
+                }
+                title="Clic para copiar destino"
+                className="cursor-pointer group/dest"
+              >
+                <div className="flex items-center gap-1">
+                  <span className="truncate text-xs font-bold text-slate-900 group-hover/dest:text-violet-700">
+                    {cleanDeliveryAddress(destination)}
+                  </span>
+
+                  {!hasCoords && (
+                    <span className="shrink-0 rounded bg-amber-100 px-1 py-0.2 text-[9px] font-bold text-amber-800">
+                      Sin mapa
+                    </span>
+                  )}
+                </div>
+
+                {showOriginDetail && (
+                  <p className="mt-0.5 truncate text-[10px] text-amber-700">
+                    Retiro: {getOriginAddress(command)}
+                  </p>
+                )}
+
+                {copiedTarget === "destination" && (
+                  <span className="block text-[10px] font-bold text-emerald-600">
+                    ¡Copiado!
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </td>
+
+        {/* 3. NOTA */}
+        <td className="max-w-[150px] px-3 py-2 align-middle">
+          {notes ? (
+            <div
+              onClick={() => void handleCopy(notes, "notes")}
+              title={notes}
+              className="cursor-pointer truncate rounded border border-amber-200/50 bg-amber-50/70 px-2 py-0.5 text-xs text-amber-900 hover:bg-amber-100"
+            >
+              <span className="truncate">{notes}</span>
+            </div>
+          ) : (
+            <span className="text-xs text-slate-300">—</span>
+          )}
+        </td>
+
+        {/* 4. PRECIO Y ESTADO LOGÍSTICO */}
+        <td className="whitespace-nowrap px-3 py-2 align-middle">
+          <div className="flex flex-col gap-1">
+            {hasPrice ? (
+              <span className="text-xs font-black tabular-nums text-slate-900">
+                {formatARS(command.quotedCost!)}
+              </span>
+            ) : (
+              <span className="w-fit rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-bold text-amber-700">
+                Pendiente
+              </span>
+            )}
+
+            <span
+              className={`inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${statusInfo.className}`}
+            >
+              {statusInfo.label}
+            </span>
+          </div>
+        </td>
+
+        {/* 5. ACCIONES RÁPIDAS */}
+        <td className="sticky right-0 z-10 whitespace-nowrap bg-white px-3 py-2 align-middle shadow-[-6px_0_8px_-8px_rgba(0,0,0,0.1)] group-hover:bg-slate-50">
+          <div className="flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => void handleCopy(getTravelSummary(command), "all")}
+              title="Copiar resumen"
+              className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+            >
+              {copiedTarget === "all" ? (
+                <Check size={13} className="text-emerald-600" />
+              ) : (
+                <Copy size={13} />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleQuote}
+              className="inline-flex h-7 items-center gap-1 rounded border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:border-violet-300 hover:bg-violet-50"
+            >
+              <Pencil size={11} />
+              <span>{hasPrice ? "Editar" : "Cotizar"}</span>
+            </button>
+
+            {!isQuote && (
+              <>
+                {logisticsStatus === LogisticsCommandStatusV2.PENDING ||
+                logisticsStatus === LogisticsCommandStatusV2.QUOTED ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onAcceptDispatch(command as BasePendingDispatch)
+                    }
+                    disabled={actionLoading}
+                    className="inline-flex h-7 items-center gap-1 rounded bg-emerald-600 px-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    <Check size={11} />
+                    <span>Aceptar</span>
+                  </button>
+                ) : logisticsStatus === LogisticsCommandStatusV2.ACCEPTED ||
+                  logisticsStatus === LogisticsCommandStatusV2.IN_TRANSIT ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCompleteDispatch?.(command as BasePendingDispatch)
+                    }
+                    disabled={actionLoading}
+                    className="inline-flex h-7 items-center gap-1 rounded bg-blue-600 px-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                    title="Marcar pedido como completado"
+                  >
+                    <CheckCheck size={12} />
+                    <span>Completar</span>
+                  </button>
+                ) : (
+                  <span className="px-1 text-[11px] font-medium italic text-slate-400">
+                    Finalizado
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+        </td>
+      </tr>
+
+      {/* MODAL CON MAPA */}
+      <GeoPickerModal
+        isOpen={isGeoModalOpen}
+        onClose={() => setIsGeoModalOpen(false)}
+        initialAddress={cleanDeliveryAddress(destination)}
+        initialLat={Number((command as any).destinationLatitude) || null}
+        initialLng={Number((command as any).destinationLongitude) || null}
+        onSave={(lat, lng, address) => onSaveDestinationCoords(command.id, lat, lng, address)}
+      />
+    </>
   );
 }

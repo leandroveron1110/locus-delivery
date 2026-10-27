@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import {
+  LogisticsCommandStatusV2,
   type BasePendingDispatch,
   type BaseUrgentQuote,
 } from "@/mini-back/infrastructure/network/base-delivery-api";
@@ -20,6 +21,7 @@ import {
 import { CommandRow } from "./CommandRow";
 import { groupOrdersByH3Proximity, DeliveryBatch } from "@/utils/h3-batching";
 import { CombinedBatchCard } from "./CombinedBatchCard";
+import { cleanDeliveryAddress } from "@/utils/clean-delivery-address";
 
 type PanelTab = "quotes" | "dispatches";
 type ViewMode = "business" | "batches"; // Nueva vista para separar comercios vs agrupadores
@@ -34,6 +36,13 @@ interface DeliveryListsProps {
   acceptingId: string | null;
   onQuote: (command: QuoteCommand, mode: "create" | "edit") => void;
   onAcceptDispatch: (command: BasePendingDispatch) => void;
+  onSetInTransit: (command: BasePendingDispatch) => void;
+  onSaveDestinationCoords: (
+    commandId: string,
+    lat: number,
+    lng: number,
+    address: string,
+  ) => Promise<void> | void;
 }
 
 interface GroupedBusiness {
@@ -45,14 +54,6 @@ interface GroupedBusiness {
   totalCommands: number;
 }
 
-function cleanLocalText(
-  value: string | null | undefined,
-  fallback: string,
-): string {
-  if (!value?.trim()) return fallback;
-  return value.replace(/,\s*Concepción del Uruguay/gi, "").trim() || fallback;
-}
-
 export default function DeliveryLists({
   activeTab,
   quotes,
@@ -61,6 +62,8 @@ export default function DeliveryLists({
   acceptingId,
   onQuote,
   onAcceptDispatch,
+  onSetInTransit,
+  onSaveDestinationCoords,
 }: DeliveryListsProps) {
   const isQuotes = activeTab === "quotes";
   const commands: QuoteCommand[] = isQuotes ? quotes : dispatches;
@@ -98,11 +101,11 @@ export default function DeliveryLists({
 
     for (const command of sorted) {
       const key = command.businessId || command.originName || "unnamed";
-      const address = cleanLocalText(command.originAddress, "");
+      const address = cleanDeliveryAddress(command.originAddress, "");
 
       if (!map.has(key)) {
         map.set(key, {
-          businessName: cleanLocalText(command.originName, "Comercio"),
+          businessName: cleanDeliveryAddress(command.originName, "Comercio"),
           businessAddress: address,
           hasMultipleAddresses: false,
           commands: [],
@@ -137,7 +140,11 @@ export default function DeliveryLists({
 
   // 2. Vista Exclusiva de Lotes Sugeridos (H3 Proximity Across City)
   const allCityBatches = useMemo(() => {
-    return groupOrdersByH3Proximity(commands);
+    return groupOrdersByH3Proximity(
+      commands.filter(
+        (c) => c.logisticsStatus === LogisticsCommandStatusV2.PENDING,
+      ),
+    );
   }, [commands]);
 
   // Filtramos solo los lotes que realmente combinaron 2 pedidos para el apartado de lotes
@@ -325,9 +332,10 @@ export default function DeliveryLists({
                             command={command}
                             isQuote={isQuotes}
                             showOriginDetail={group.hasMultipleAddresses}
-                            accepting={!isQuotes && acceptingId === command.id}
                             onQuote={onQuote}
                             onAcceptDispatch={onAcceptDispatch}
+                            onCompleteDispatch={onSetInTransit}
+                            onSaveDestinationCoords={onSaveDestinationCoords}
                           />
                         ))}
                       </tbody>

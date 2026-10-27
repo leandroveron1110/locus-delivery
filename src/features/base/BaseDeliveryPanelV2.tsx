@@ -13,6 +13,8 @@ import {
 
 import {
   baseAcceptDispatch,
+  baseCompletedDispatch,
+  baseDestinationCoords,
   baseQuoteOrder,
   fetchBasePendingDispatches,
   fetchBaseUrgentQuotes,
@@ -22,7 +24,6 @@ import {
 import { cleanDeliveryAddress } from "@/utils/clean-delivery-address";
 import DeliveryLists from "./DeliveryLists";
 import QuoteEditor, { QuoteEditorState } from "./QuoteEditor";
-
 
 interface BaseDeliveryPanelV2Props {
   zoneId?: string;
@@ -37,7 +38,6 @@ function getErrorMessage(error: unknown): string {
     ? error.message
     : "Ocurrió un error inesperado.";
 }
-
 
 export default function BaseDeliveryPanelV2({
   zoneId,
@@ -134,9 +134,7 @@ export default function BaseDeliveryPanelV2({
     setPriceInput("");
   }, [isSaving]);
 
-  const handleSaveQuote = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const handleSaveQuote = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!editor) return;
@@ -182,17 +180,61 @@ export default function BaseDeliveryPanelV2({
     }
   };
 
-  const handleAcceptDispatch = async (
-    command: BasePendingDispatch,
-  ) => {
-
-
+  const handleAcceptDispatch = async (command: BasePendingDispatch) => {
     setAcceptingId(command.id);
     setError(null);
     setSuccessMessage(null);
 
     try {
       await baseAcceptDispatch(command.id);
+
+      setSuccessMessage("Despacho aceptado correctamente.");
+
+      await loadData(false);
+    } catch (acceptError) {
+      setError(
+        `No se pudo aceptar el despacho: ${getErrorMessage(acceptError)}`,
+      );
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const onSaveDestinationCoords = async (
+    commandId: string,
+    lat: number,
+    lng: number,
+    address: string,
+  ) => {
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await baseDestinationCoords(commandId, {
+        destinationAddress: address,
+        destinationLatitude: lat,
+        destinationLongitude: lng,
+      });
+
+      setSuccessMessage("Despacho aceptado correctamente.");
+
+      await loadData(false);
+    } catch (acceptError) {
+      setError(
+        `No se pudo aceptar el despacho: ${getErrorMessage(acceptError)}`,
+      );
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const handleCompletedDispatch = async (command: BasePendingDispatch) => {
+    setAcceptingId(command.id);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await baseCompletedDispatch(command.id);
 
       setSuccessMessage("Despacho aceptado correctamente.");
 
@@ -250,9 +292,7 @@ export default function BaseDeliveryPanelV2({
   }, [pendingDispatches, search]);
 
   const activeCount =
-    activeTab === "quotes"
-      ? filteredQuotes.length
-      : filteredDispatches.length;
+    activeTab === "quotes" ? filteredQuotes.length : filteredDispatches.length;
 
   return (
     <section className="min-h-full space-y-5 text-slate-900">
@@ -268,9 +308,7 @@ export default function BaseDeliveryPanelV2({
               Logística
             </h1>
 
-            <p className="text-sm text-slate-500">
-              Cotizaciones y despachos
-            </p>
+            <p className="text-sm text-slate-500">Cotizaciones y despachos</p>
           </div>
         </div>
 
@@ -282,10 +320,7 @@ export default function BaseDeliveryPanelV2({
           title="Actualizar pedidos"
           className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-3"
         >
-          <RefreshCw
-            size={16}
-            className={isRefreshing ? "animate-spin" : ""}
-          />
+          <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
 
           <span className="ml-2 hidden text-sm font-medium sm:inline">
             Actualizar
@@ -391,14 +426,9 @@ export default function BaseDeliveryPanelV2({
         <div className="p-3 sm:p-4">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-14 text-center">
-              <Loader2
-                size={25}
-                className="animate-spin text-slate-400"
-              />
+              <Loader2 size={25} className="animate-spin text-slate-400" />
 
-              <p className="mt-3 text-sm text-slate-500">
-                Cargando pedidos...
-              </p>
+              <p className="mt-3 text-sm text-slate-500">Cargando pedidos...</p>
             </div>
           ) : (
             <DeliveryLists
@@ -407,12 +437,10 @@ export default function BaseDeliveryPanelV2({
               dispatches={filteredDispatches}
               search={search}
               acceptingId={acceptingId}
-              onQuote={(command, mode) =>
-                openQuoteEditor(command, mode)
-              }
-              onAcceptDispatch={(command) =>
-                void handleAcceptDispatch(command)
-              }
+              onSetInTransit={(c) => handleCompletedDispatch(c)}
+              onQuote={(command, mode) => openQuoteEditor(command, mode)}
+              onAcceptDispatch={(command) => void handleAcceptDispatch(command)}
+              onSaveDestinationCoords={onSaveDestinationCoords}
             />
           )}
 

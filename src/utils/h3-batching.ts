@@ -1,4 +1,4 @@
-import { gridDistance, latLngToCell } from "h3-js";
+import { gridDisk, gridDistance, latLngToCell } from "h3-js";
 import {
   type BasePendingDispatch,
   type BaseUrgentQuote,
@@ -18,107 +18,329 @@ export interface DeliveryBatch {
   isCombined: boolean;
 }
 
-// 🎯 RESOLUCIÓN H3 = 8 (Celdas hexagonales de ~450m a 460m)
-const H3_RESOLUTION = 8;
+interface Coordinates {
+  originLat: number;
+  originLng: number;
+  destinationLat: number;
+  destinationLng: number;
+}
 
 interface ProcessedOrder {
   command: QuoteCommand;
+  coordinates: Coordinates | null;
   originCell: string | null;
   destCell: string | null;
   isShareable: boolean;
 }
 
-function getCoordinates(command: CommandWithCoordinates) {
-  const oLat = command.originLatitude ?? command.lat;
-  const oLng = command.originLongitude ?? command.lng;
-  const dLat = command.destinationLatitude;
-  const dLng = command.destinationLongitude;
+// H3 resolution 8: índice espacial.
+// La dimensión de las celdas no equivale a un radio exacto en metros.
+const H3_RESOLUTION = 8;
+
+// Radio máximo entre negocios y entre destinos.
+const MAX_ORIGIN_DISTANCE_METERS = 400;
+const MAX_DESTINATION_DISTANCE_METERS = 400;
+
+// Cantidad de saltos H3 examinados para generar candidatos.
+// Es un margen conservador para esta resolución, no una garantía universal.
+const ORIGIN_SEARCH_GRID_RADIUS = 3;
+
+const EARTH_RADIUS_METERS = 6_371_000;
+
+function getCoordinates(command: CommandWithCoordinates): Coordinates | null {
+  const originLat = command.originLatitude ?? command.lat;
+  const originLng = command.originLongitude ?? command.lng;
+
+  const destinationLat = command.destinationLatitude;
+  const destinationLng = command.destinationLongitude;
 
   if (
-    typeof oLat === "number" && Number.isFinite(oLat) &&
-    typeof oLng === "number" && Number.isFinite(oLng) &&
-    typeof dLat === "number" && Number.isFinite(dLat) &&
-    typeof dLng === "number" && Number.isFinite(dLng)
+    typeof originLat !== "number" ||
+    !Number.isFinite(originLat) ||
+    originLat < -90 ||
+    originLat > 90 ||
+    typeof originLng !== "number" ||
+    !Number.isFinite(originLng) ||
+    originLng < -180 ||
+    originLng > 180 ||
+    typeof destinationLat !== "number" ||
+    !Number.isFinite(destinationLat) ||
+    destinationLat < -90 ||
+    destinationLat > 90 ||
+    typeof destinationLng !== "number" ||
+    !Number.isFinite(destinationLng) ||
+    destinationLng < -180 ||
+    destinationLng > 180
   ) {
-    return {
-      originLat: oLat,
-      originLng: oLng,
-      destinationLat: dLat,
-      destinationLng: dLng,
-    };
+    return null;
   }
 
-  return null;
+  return {
+    originLat,
+    originLng,
+    destinationLat,
+    destinationLng,
+  };
 }
 
-function areCellsAdjacentOrSame(cellA: string, cellB: string): boolean {
-  if (cellA === cellB) return true;
+/**
+ * Calcula la distancia geográfica en línea recta entre dos coordenadas.
+ * No representa la distancia real por calles.
+ */
+function distanceMeters(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+
+  const dLat = toRadians(lat2 - lat1);
+  const dLng = toRadians(lng2 - lng1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLng / 2) ** 2;
+
+  // Protección frente a pequeños errores de precisión de coma flotante.
+  const safeA = Math.max(0, Math.min(1, a));
+
+  return 2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(safeA));
+}
+
+/**
+ * Calcula las celdas candidatas alrededor de una celda de origen.
+ *
+ * gridDisk utiliza pasos de cuadrícula, no metros.
+ * Si H3 no puede completar la operación, devolvemos null para permitir
+ * una búsqueda de respaldo que no descarte candidatos silenciosamente.
+ */
+function getNearbyCells(cell: string): Set<string> | null {
   try {
-    return gridDistance(cellA, cellB) <= 1;
+    return new Set(gridDisk(cell, ORIGIN_SEARCH_GRID_RADIUS));
   } catch {
-    return false;
+    return null;
   }
+}
+
+/**
+ * Construye el índice espacial:
+ *
+ * celda H3 de origen -> pedidos cuyo negocio está en esa celda.
+ *
+ * Esto evita recorrer todos los pedidos para encontrar candidatos
+ * geográficamente próximos.
+ */
+function buildOriginIndex(
+  items: ProcessedOrder[],
+): Map<string, ProcessedOrder[]> {
+  const index = new Map<string, ProcessedOrder[]>();
+
+  for (const item of items) {
+    if (!item.originCell) continue;
+
+    const bucket = index.get(item.originCell);
+
+    if (bucket) {
+      bucket.push(item);
+    } else {
+      index.set(item.originCell, [item]);
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Devuelve los pedidos que están en las celdas candidatas.
+ *
+ * En el caso excepcional de que gridDisk falle, se utiliza gridDistance
+ * sobre las celdas indexadas. Si tampoco puede calcularse una distancia
+ * para alguna celda, se incluye como candidata para verificarla después
+ * con las coordenadas reales.
+ *
+ * La búsqueda de respaldo prioriza no descartar candidatos por un fallo
+ * del índice, aunque puede ser más costosa.
+ */
+function findOriginCandidates(
+  current: ProcessedOrder,
+  originIndex: Map<string, ProcessedOrder[]>,
+): ProcessedOrder[] {
+  if (!current.originCell) return [];
+
+  const nearbyCells = getNearbyCells(current.originCell);
+
+  if (nearbyCells) {
+    const candidates: ProcessedOrder[] = [];
+
+    for (const cell of nearbyCells) {
+      const bucket = originIndex.get(cell);
+
+      if (bucket) {
+        candidates.push(...bucket);
+      }
+    }
+
+    return candidates;
+  }
+
+  const fallbackCandidates: ProcessedOrder[] = [];
+
+  for (const [cell, bucket] of originIndex) {
+    try {
+      if (gridDistance(current.originCell, cell) <= ORIGIN_SEARCH_GRID_RADIUS) {
+        fallbackCandidates.push(...bucket);
+      }
+    } catch {
+      // No descartamos la celda si H3 no puede calcular la distancia.
+      fallbackCandidates.push(...bucket);
+    }
+  }
+
+  return fallbackCandidates;
+}
+
+/**
+ * Comprueba las distancias reales entre dos pedidos.
+ *
+ * Las celdas H3 solo generan candidatos. La decisión final utiliza
+ * las coordenadas originales.
+ */
+function evaluatePair(
+  first: ProcessedOrder,
+  second: ProcessedOrder,
+): { compatible: boolean; score: number } {
+  if (
+    !first.isShareable ||
+    !second.isShareable ||
+    !first.coordinates ||
+    !second.coordinates
+  ) {
+    return { compatible: false, score: Infinity };
+  }
+
+  const a = first.coordinates;
+  const b = second.coordinates;
+
+  const originDistance = distanceMeters(
+    a.originLat,
+    a.originLng,
+    b.originLat,
+    b.originLng,
+  );
+
+  if (originDistance > MAX_ORIGIN_DISTANCE_METERS) {
+    return { compatible: false, score: Infinity };
+  }
+
+  const destinationDistance = distanceMeters(
+    a.destinationLat,
+    a.destinationLng,
+    b.destinationLat,
+    b.destinationLng,
+  );
+
+  if (destinationDistance > MAX_DESTINATION_DISTANCE_METERS) {
+    return { compatible: false, score: Infinity };
+  }
+
+  // Prioriza parejas con menor suma de distancias geográficas.
+  // No representa el costo real del recorrido por calles.
+  return {
+    compatible: true,
+    score: originDistance + destinationDistance,
+  };
 }
 
 export function groupOrdersByH3Proximity(
   commands: QuoteCommand[],
 ): DeliveryBatch[] {
-  // 1. Precalculamos las celdas H3 en resolución 8 (450m) en una sola pasada
-  const items: ProcessedOrder[] = commands.map((cmd) => {
-    const coords = getCoordinates(cmd as CommandWithCoordinates);
-    const isShareable = Boolean(cmd.isShareable);
+  if (commands.length === 0) return [];
 
-    if (!coords || !isShareable) {
-      return { command: cmd, originCell: null, destCell: null, isShareable: false };
+  // 1. Procesar cada pedido y calcular sus celdas una sola vez.
+  const items: ProcessedOrder[] = commands.map((command) => {
+    const coordinates = getCoordinates(command as CommandWithCoordinates);
+
+    const isShareable = Boolean(command.isShareable);
+
+    if (!coordinates) {
+      return {
+        command,
+        coordinates: null,
+        originCell: null,
+        destCell: null,
+        isShareable: false,
+      };
     }
 
     return {
-      command: cmd,
-      originCell: latLngToCell(coords.originLat, coords.originLng, H3_RESOLUTION),
-      destCell: latLngToCell(coords.destinationLat, coords.destinationLng, H3_RESOLUTION),
-      isShareable: true,
+      command,
+      coordinates,
+      originCell: latLngToCell(
+        coordinates.originLat,
+        coordinates.originLng,
+        H3_RESOLUTION,
+      ),
+      destCell: latLngToCell(
+        coordinates.destinationLat,
+        coordinates.destinationLng,
+        H3_RESOLUTION,
+      ),
+      isShareable,
     };
   });
 
-  const unassigned = [...items];
+  // 2. Crear un índice de pedidos por celda de origen.
+  const originIndex = buildOriginIndex(items);
+
+  // Set conserva la identidad de cada elemento procesado.
+  const unassigned = new Set(items);
   const batches: DeliveryBatch[] = [];
 
-  // 2. Emparejamiento por celdas idénticas o vecinas (gridDistance <= 1)
-  while (unassigned.length > 0) {
-    const current = unassigned.shift()!;
+  // 3. Emparejamiento voraz:
+  // para cada pedido, buscamos su mejor pareja disponible.
+  for (const current of items) {
+    if (!unassigned.has(current)) continue;
 
-    if (!current.isShareable || !current.originCell || !current.destCell) {
+    unassigned.delete(current);
+
+    if (!current.isShareable || !current.coordinates || !current.originCell) {
       batches.push({
         id: `single-${current.command.id}`,
         primaryCommand: current.command,
         isCombined: false,
       });
+
       continue;
     }
 
-    const matchIndex = unassigned.findIndex((candidate) => {
-      if (!candidate.isShareable || !candidate.originCell || !candidate.destCell) {
-        return false;
+    const candidates = findOriginCandidates(current, originIndex);
+
+    let bestCandidate: ProcessedOrder | null = null;
+    let bestScore = Infinity;
+
+    for (const candidate of candidates) {
+      if (candidate === current || !unassigned.has(candidate)) {
+        continue;
       }
 
-      const originsCompatible = areCellsAdjacentOrSame(
-        current.originCell!,
-        candidate.originCell!,
-      );
-      const destinationsCompatible = areCellsAdjacentOrSame(
-        current.destCell!,
-        candidate.destCell!,
-      );
+      const result = evaluatePair(current, candidate);
 
-      return originsCompatible && destinationsCompatible;
-    });
+      if (result.compatible && result.score < bestScore) {
+        bestCandidate = candidate;
+        bestScore = result.score;
+      }
+    }
 
-    if (matchIndex !== -1) {
-      const partner = unassigned.splice(matchIndex, 1)[0];
+    if (bestCandidate) {
+      unassigned.delete(bestCandidate);
+
       batches.push({
-        id: `batch-${current.command.id}-${partner.command.id}`,
+        id: `batch-${current.command.id}-${bestCandidate.command.id}`,
         primaryCommand: current.command,
-        secondaryCommand: partner.command,
+        secondaryCommand: bestCandidate.command,
         isCombined: true,
       });
     } else {

@@ -2,7 +2,6 @@
 
 import { apiGet, apiPatch } from "@/lib/apiFetch";
 
-
 export enum BusinessCommandStatusV2 {
   PENDING = "PENDING",
   QUOTE_REQUESTED = "QUOTE_REQUESTED",
@@ -82,8 +81,9 @@ export interface BaseUrgentQuote {
   originLatitude: string | null;
   originLongitude: string | null;
 
-
+  requiredCouriers: number;
   isShareable: boolean;
+  notes: string;
 
   createdAt: string;
   updatedAt?: string;
@@ -109,7 +109,7 @@ export interface BasePendingDispatch {
 
   requiredCouriers: number;
   isShareable: boolean;
-
+  notes: string;
   businessStatus?: BusinessCommandStatusV2;
   logisticsStatus: LogisticsCommandStatusV2;
 
@@ -130,9 +130,6 @@ export interface BaseQuoteOrderInput {
  * Se utiliza cuando el servidor devuelve el comando actualizado.
  */
 export type BaseDeliveryCommandResponse = DeliveryCommandV2;
-
-
-
 
 /**
  * Obtiene las solicitudes pendientes de cotización.
@@ -204,5 +201,27 @@ export async function baseAcceptDispatch(
 ): Promise<BaseDeliveryCommandResponse | null> {
   return apiPatch<BaseDeliveryCommandResponse>(
     `/delivery-commands-v2/${encodeURIComponent(id)}/base/accept`,
+  );
+}
+
+export async function baseCompletedDispatch(
+  id: string,
+): Promise<BaseDeliveryCommandResponse | null> {
+  return apiPatch<BaseDeliveryCommandResponse>(
+    `/delivery-commands-v2/${encodeURIComponent(id)}/base/in-completed`,
+  );
+}
+
+export async function baseDestinationCoords(
+  id: string,
+  dto: {
+    destinationAddress: string;
+    destinationLatitude: number;
+    destinationLongitude: number;
+  },
+): Promise<BaseDeliveryCommandResponse | null> {
+  return apiPatch<BaseDeliveryCommandResponse>(
+    `/delivery-commands-v2/coords/${encodeURIComponent(id)}`,
+    dto,
   );
 }

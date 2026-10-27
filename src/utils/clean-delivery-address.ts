@@ -4,6 +4,7 @@ const REDUNDANT_LOCATION_PARTS = [
   /^entre\s+ríos$/i,
   /^entre\s+rios$/i,
   /^uruguay$/i,
+  /^E3264$/i
 ];
 
 export function cleanDeliveryAddress(
