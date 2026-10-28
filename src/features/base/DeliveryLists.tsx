@@ -36,6 +36,7 @@ interface DeliveryListsProps {
   acceptingId: string | null;
   onQuote: (command: QuoteCommand, mode: "create" | "edit") => void;
   onAcceptDispatch: (command: BasePendingDispatch) => void;
+  onAssignDispatch: (command: BasePendingDispatch) => void;
   onSetInTransit: (command: BasePendingDispatch) => void;
   onSaveDestinationCoords: (
     commandId: string,
@@ -62,6 +63,7 @@ export default function DeliveryLists({
   acceptingId,
   onQuote,
   onAcceptDispatch,
+  onAssignDispatch,
   onSetInTransit,
   onSaveDestinationCoords,
 }: DeliveryListsProps) {
@@ -336,6 +338,7 @@ export default function DeliveryLists({
                             onAcceptDispatch={onAcceptDispatch}
                             onCompleteDispatch={onSetInTransit}
                             onSaveDestinationCoords={onSaveDestinationCoords}
+                            onAssignDispatch={onAssignDispatch}
                           />
                         ))}
                       </tbody>

@@ -38,6 +38,7 @@ interface CommandRowProps {
   actionLoading?: boolean;
   onQuote: (command: QuoteCommand, mode: "create" | "edit") => void;
   onAcceptDispatch: (command: BasePendingDispatch) => void;
+  onAssignDispatch: (command: BasePendingDispatch) => void;
   onCompleteDispatch?: (command: BasePendingDispatch) => void;
   onSaveDestinationCoords: (
     commandId: string,
@@ -67,6 +68,10 @@ const LOGISTICS_STATUS_PRESENTATION: Record<
   [LogisticsCommandStatusV2.ACCEPTED]: {
     label: "Aceptado",
     className: "bg-indigo-100 text-indigo-800",
+  },
+  [LogisticsCommandStatusV2.ASSIGNED]: {
+    label: "Cadete asignado",
+    className: "bg-violet-100 text-violet-800",
   },
   [LogisticsCommandStatusV2.IN_TRANSIT]: {
     label: "En camino",
@@ -161,6 +166,7 @@ export function CommandRow({
   actionLoading = false,
   onQuote,
   onAcceptDispatch,
+  onAssignDispatch,
   onCompleteDispatch,
   onSaveDestinationCoords,
 }: CommandRowProps) {
@@ -406,12 +412,29 @@ export function CommandRow({
                     }
                     disabled={actionLoading}
                     className="inline-flex h-7 items-center gap-1 rounded bg-emerald-600 px-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                    title="Aceptar el despacho"
                   >
                     <Check size={11} />
                     <span>Aceptar</span>
                   </button>
-                ) : logisticsStatus === LogisticsCommandStatusV2.ACCEPTED ||
-                  logisticsStatus === LogisticsCommandStatusV2.IN_TRANSIT ? (
+                ) : logisticsStatus === LogisticsCommandStatusV2.ACCEPTED ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onAssignDispatch(command as BasePendingDispatch)
+                    }
+                    disabled={actionLoading}
+                    className="inline-flex h-7 items-center gap-1 rounded bg-violet-600 px-2.5 text-xs font-bold text-white shadow-sm hover:bg-violet-700 disabled:opacity-50"
+                    title="Marcar que el despacho ya tiene un cadete asignado"
+                  >
+                    <UsersRound size={12} />
+                    <span>Asignar</span>
+                  </button>
+                ) : logisticsStatus === LogisticsCommandStatusV2.ASSIGNED ? (
+                  <span className="px-1 text-[11px] font-medium italic text-violet-700">
+                    Esperando retiro
+                  </span>
+                ) : logisticsStatus === LogisticsCommandStatusV2.IN_TRANSIT ? (
                   <button
                     type="button"
                     onClick={() =>
@@ -419,7 +442,7 @@ export function CommandRow({
                     }
                     disabled={actionLoading}
                     className="inline-flex h-7 items-center gap-1 rounded bg-blue-600 px-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
-                    title="Marcar pedido como completado"
+                    title="Confirmar que el pedido fue entregado"
                   >
                     <CheckCheck size={12} />
                     <span>Completar</span>

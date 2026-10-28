@@ -13,6 +13,7 @@ import {
 
 import {
   baseAcceptDispatch,
+  baseAssignedDispatch,
   baseCompletedDispatch,
   baseDestinationCoords,
   baseQuoteOrder,
@@ -187,6 +188,26 @@ export default function BaseDeliveryPanelV2({
 
     try {
       await baseAcceptDispatch(command.id);
+
+      setSuccessMessage("Despacho aceptado correctamente.");
+
+      await loadData(false);
+    } catch (acceptError) {
+      setError(
+        `No se pudo aceptar el despacho: ${getErrorMessage(acceptError)}`,
+      );
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const onAssignDispatch = async (command: BasePendingDispatch) => {
+    setAcceptingId(command.id);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await baseAssignedDispatch(command.id);
 
       setSuccessMessage("Despacho aceptado correctamente.");
 
@@ -441,6 +462,7 @@ export default function BaseDeliveryPanelV2({
               onQuote={(command, mode) => openQuoteEditor(command, mode)}
               onAcceptDispatch={(command) => void handleAcceptDispatch(command)}
               onSaveDestinationCoords={onSaveDestinationCoords}
+              onAssignDispatch={onAssignDispatch}
             />
           )}
 

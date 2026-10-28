@@ -15,6 +15,7 @@ export enum LogisticsCommandStatusV2 {
   PENDING = "PENDING",
   QUOTED = "QUOTED",
   ACCEPTED = "ACCEPTED",
+  ASSIGNED = "ASSIGNED",
   IN_TRANSIT = "IN_TRANSIT",
   COMPLETED = "COMPLETED",
   REJECTED = "REJECTED",
@@ -201,6 +202,17 @@ export async function baseAcceptDispatch(
 ): Promise<BaseDeliveryCommandResponse | null> {
   return apiPatch<BaseDeliveryCommandResponse>(
     `/delivery-commands-v2/${encodeURIComponent(id)}/base/accept`,
+  );
+}
+
+/**
+ * Acepta un despacho.
+ */
+export async function baseAssignedDispatch(
+  id: string,
+): Promise<BaseDeliveryCommandResponse | null> {
+  return apiPatch<BaseDeliveryCommandResponse>(
+    `/delivery-commands-v2/${encodeURIComponent(id)}/base/assigned`,
   );
 }
 
