@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, Search, Check, X, Map as MapIcon } from "lucide-react";
+import { createPortal } from "react-dom";
+import { MapPin, Search, Check, X } from "lucide-react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { EsriProvider } from "leaflet-geosearch";
 
-// Corrección para el icono por defecto de Leaflet en Next.js/React
 const defaultIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow-png.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
@@ -22,7 +24,6 @@ interface GeoPickerModalProps {
   onSave: (lat: number, lng: number, address: string) => Promise<void> | void;
 }
 
-// Componente auxiliar para manejar clics en el mapa y mover el marcador
 function MapClickHandler({
   position,
   setPosition,
@@ -41,7 +42,6 @@ function MapClickHandler({
   );
 }
 
-// Componente para recentrar el mapa cuando cambian las coordenadas
 function MapRecenter({ center }: { center: { lat: number; lng: number } }) {
   const map = useMapEvents({});
   useEffect(() => {
@@ -52,6 +52,9 @@ function MapRecenter({ center }: { center: { lat: number; lng: number } }) {
   return null;
 }
 
+// Instanciamos el provider de Esri fuera del componente para evitar recrearlo
+const esriProvider = new EsriProvider();
+
 export function GeoPickerModal({
   isOpen,
   onClose,
@@ -60,47 +63,71 @@ export function GeoPickerModal({
   initialLng,
   onSave,
 }: GeoPickerModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [addressQuery, setAddressQuery] = useState(initialAddress);
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
-  // Coordenadas por defecto (Centro aproximado de Concepción del Uruguay, Entre Ríos)
+
   const defaultCenter = { lat: -32.4823, lng: -58.2372 };
-  
+
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
     initialLat && initialLng ? { lat: initialLat, lng: initialLng } : null
   );
 
   useEffect(() => {
-    if (initialLat && initialLng) {
-      setCoords({ lat: initialLat, lng: initialLng });
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setAddressQuery(initialAddress || "");
+      if (initialLat && initialLng) {
+        setCoords({ lat: initialLat, lng: initialLng });
+      } else {
+        setCoords(null);
+      }
     }
-  }, [initialLat, initialLng]);
+  }, [isOpen, initialAddress, initialLat, initialLng]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  // Buscar dirección por texto usando Nominatim (OpenStreetMap)
+  // Búsqueda utilizando EsriProvider (ArcGIS) con acotación local
   const handleSearchCoords = async () => {
     if (!addressQuery.trim()) return;
     setIsSearching(true);
-    try {
-      const fullQuery = `${addressQuery}, Concepción del Uruguay, Entre Ríos`;
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          fullQuery
-        )}`
-      );
-      const data = await response.json();
 
-      if (data && data.length > 0) {
-        const newLat = parseFloat(data[0].lat);
-        const newLng = parseFloat(data[0].lon);
-        setCoords({ lat: newLat, lng: newLng });
+    try {
+      // Forzamos el contexto local para que no busque en cualquier parte del mundo
+      const queryWithContext = `${addressQuery}, Concepción del Uruguay, Entre Ríos, Argentina`;
+      
+      const results = await esriProvider.search({ query: queryWithContext });
+
+      if (results && results.length > 0) {
+        // Esri devuelve x (lng) e y (lat)
+        setCoords({
+          lat: results[0].y,
+          lng: results[0].x,
+        });
       } else {
-        alert("No se encontró la dirección exacta en el mapa.");
+        // Segundo intento solo con la calle por si la altura falla
+        const streetOnly = addressQuery.replace(/\d+/g, "").trim();
+        if (streetOnly.length > 2) {
+          const fallbackResults = await esriProvider.search({
+            query: `${streetOnly}, Concepción del Uruguay, Entre Ríos, Argentina`,
+          });
+          if (fallbackResults && fallbackResults.length > 0) {
+            setCoords({
+              lat: fallbackResults[0].y,
+              lng: fallbackResults[0].x,
+            });
+            return;
+          }
+        }
+        alert("Esri tampoco encontró la dirección exacta. Hacé clic en el mapa para ubicarla a mano.");
       }
     } catch (err) {
-      console.error("Error obteniendo coordenadas:", err);
+      console.error("Error en EsriProvider:", err);
+      alert("Error al conectar con el servicio de mapas.");
     } finally {
       setIsSearching(false);
     }
@@ -119,8 +146,8 @@ export function GeoPickerModal({
 
   const currentCenter = coords || defaultCenter;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
       <div className="flex w-full max-w-2xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
         
         {/* Cabecera */}
@@ -128,7 +155,7 @@ export function GeoPickerModal({
           <div className="flex items-center gap-2">
             <MapPin className="text-violet-600" size={18} />
             <h3 className="text-sm font-bold text-slate-900">
-              Ajustar Ubicación de Destino en Mapa
+              Ajustar Ubicación en Mapa (Esri Geosearch)
             </h3>
           </div>
           <button
@@ -150,7 +177,8 @@ export function GeoPickerModal({
                 type="text"
                 value={addressQuery}
                 onChange={(e) => setAddressQuery(e.target.value)}
-                placeholder="Ej: Jordana 248"
+                onKeyDown={(e) => e.key === "Enter" && handleSearchCoords()}
+                placeholder="Ej: Galarza 750"
                 className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-violet-500 focus:outline-hidden shadow-xs"
               />
               <button
@@ -160,7 +188,7 @@ export function GeoPickerModal({
                 className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-violet-700 disabled:opacity-50 transition shadow-xs"
               >
                 <Search size={13} />
-                <span>{isSearching ? "Buscando..." : "Buscar en Mapa"}</span>
+                <span>{isSearching ? "Buscando..." : "Buscar con Esri"}</span>
               </button>
             </div>
           </div>
@@ -169,7 +197,7 @@ export function GeoPickerModal({
           <div className="relative h-72 w-full overflow-hidden rounded-xl border border-slate-200 shadow-inner z-0">
             <MapContainer
               center={[currentCenter.lat, currentCenter.lng]}
-              zoom={15}
+              zoom={16}
               style={{ height: "100%", width: "100%" }}
             >
               <TileLayer
@@ -180,13 +208,11 @@ export function GeoPickerModal({
               <MapClickHandler position={coords} setPosition={setCoords} />
             </MapContainer>
 
-            {/* Aviso flotante sobre el mapa */}
             <div className="absolute bottom-2 left-2 right-2 z-[400] rounded-lg bg-slate-900/80 px-3 py-1.5 text-center text-[11px] font-medium text-white backdrop-blur-xs">
-              💡 Hacé clic en el mapa para ajustar la ubicación exacta del pin si es necesario.
+              💡 Hacé clic en el mapa si necesitás corregir la posición exacta del pin.
             </div>
           </div>
 
-          {/* Coordenadas actuales seleccionadas */}
           {coords ? (
             <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
               <span className="font-bold flex items-center gap-1.5">
@@ -198,7 +224,7 @@ export function GeoPickerModal({
             </div>
           ) : (
             <p className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
-              ⚠️ Buscá la dirección o hacé clic directamente en el mapa para establecer el punto de entrega.
+              ⚠️ Buscá la dirección o hacé clic directamente en el mapa para fijar el punto exacto.
             </p>
           )}
         </div>
@@ -225,4 +251,6 @@ export function GeoPickerModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
