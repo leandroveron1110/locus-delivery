@@ -1,6 +1,6 @@
 // src/mini-back/infrastructure/network/base-delivery-api.ts
 
-import { apiGet, apiPatch } from "@/lib/apiFetch";
+import { apiDelete, apiGet, apiPatch } from "@/lib/apiFetch";
 
 export enum BusinessCommandStatusV2 {
   PENDING = "PENDING",
@@ -83,6 +83,7 @@ export interface BaseUrgentQuote {
   originLongitude: string | null;
 
   requiredCouriers: number;
+  assignedCouriers: number;
   isShareable: boolean;
   notes: string;
 
@@ -96,7 +97,7 @@ export interface BaseUrgentQuote {
 export interface BasePendingDispatch {
   id: string;
   businessId: string;
-  orderId: string;
+  orderId?: string;
 
   originName: string | null;
   originAddress: string | null;
@@ -109,6 +110,7 @@ export interface BasePendingDispatch {
   quotedCost: number | null;
 
   requiredCouriers: number;
+  assignedCouriers: number;
   isShareable: boolean;
   notes: string;
   businessStatus?: BusinessCommandStatusV2;
@@ -151,6 +153,10 @@ export async function fetchBaseUrgentQuotes(
   );
 
   return result ?? [];
+}
+
+export async function fetchBaseDeleteAll() {
+  await apiDelete(`/delivery-commands-v2`);
 }
 
 /**

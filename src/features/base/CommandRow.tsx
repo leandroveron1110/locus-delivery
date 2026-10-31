@@ -120,6 +120,14 @@ function getRequiredCouriers(command: QuoteCommand): number {
     : 1;
 }
 
+function getAssignedCouriers(command: QuoteCommand): number {
+  if (!("requiredCouriers" in command)) return 1;
+  const count = command.assignedCouriers;
+  return typeof count === "number" && Number.isFinite(count) && count > 0
+    ? count
+    : 1;
+}
+
 function getIsShareable(command: QuoteCommand): boolean {
   if (!("isShareable" in command)) return false;
   return typeof command.isShareable === "boolean" ? command.isShareable : false;
@@ -143,6 +151,7 @@ async function copyText(text: string): Promise<boolean> {
 function getTravelSummary(command: QuoteCommand): string {
   const notes = getCommandNotes(command);
   const requiredCouriers = getRequiredCouriers(command);
+  const assignedCouriers =  getAssignedCouriers(command);
   const isShareable = getIsShareable(command);
 
   return [
@@ -177,6 +186,7 @@ export function CommandRow({
   const notes = getCommandNotes(command);
   const destination = getDestination(command);
   const requiredCouriers = getRequiredCouriers(command);
+  const assignedCouriers =  getAssignedCouriers(command);
   const isShareable = getIsShareable(command);
   const hasPrice = command.quotedCost != null;
   const hasCoords = hasValidCoords(command);
@@ -251,10 +261,10 @@ export function CommandRow({
               >
                 <UsersRound size={12} className="text-slate-400" />
                 <span className="font-bold text-slate-800">
-                  {requiredCouriers}
+                  {requiredCouriers} / {assignedCouriers}
                 </span>
                 <span className="text-[10px] text-slate-500">
-                  {requiredCouriers === 1 ? "cad." : "cads."}
+                  {requiredCouriers === 1 ? "cad." : "cads."} / {assignedCouriers}
                 </span>
               </span>
 
