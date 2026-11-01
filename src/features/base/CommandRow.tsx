@@ -157,12 +157,7 @@ function getTravelSummary(command: QuoteCommand): string {
   return [
     `RETIRO: ${getOrigin(command)} (${getOriginAddress(command)})`,
     `DESTINO: ${getDestination(command)}`,
-    `CADETES REQUERIDOS: ${requiredCouriers}`,
-    `CAJA COMPARTIBLE: ${isShareable ? "Sí" : "No"}`,
-    notes ? `NOTA: ${notes}` : "",
-    command.quotedCost != null
-      ? `COSTO: ${formatARS(command.quotedCost)}`
-      : "COSTO: Pendiente",
+    `NOTA: ${notes}`,
   ]
     .filter(Boolean)
     .join("\n");
