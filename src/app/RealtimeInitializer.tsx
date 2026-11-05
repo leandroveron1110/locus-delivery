@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  connectRealtime,
-  disconnectRealtime,
-} from "@/mini-back/infrastructure/realtime/realtime.client";
+import { connectRealtime } from "@/mini-back/infrastructure/realtime/realtime.client";
 import { useEffect } from "react";
 
 export function RealtimeInitializer() {
@@ -12,11 +9,9 @@ export function RealtimeInitializer() {
 
     if (!accessToken) return;
 
+    // Inicia la conexión global una sola vez
     connectRealtime(accessToken);
 
-    return () => {
-      disconnectRealtime();
-    };
   }, []);
 
   return null;
