@@ -29,6 +29,7 @@ import {
 import DeliveryLists from "./DeliveryLists";
 import QuoteEditor, { QuoteEditorState } from "./QuoteEditor";
 import { listenDeliveryCommands } from "./service/delivery-realtime.listener";
+import { ConnectionStatus } from "@/lib/ConnectionStatus";
 
 interface BaseDeliveryPanelV2Props {
   zoneId?: string;
@@ -249,7 +250,7 @@ function playNotificationTones(frequencies: number[]) {
 export default function BaseDeliveryPanelV2({
   zoneId,
 }: BaseDeliveryPanelV2Props) {
-  const [activeTab, setActiveTab] = useState<PanelTab>("quotes");
+  const [activeTab, setActiveTab] = useState<PanelTab>("dispatches");
 
   const [urgentQuotes, setUrgentQuotes] = useState<BaseUrgentQuote[]>([]);
   const [pendingDispatches, setPendingDispatches] = useState<
@@ -648,6 +649,8 @@ export default function BaseDeliveryPanelV2({
             <p className="text-sm text-slate-500">
               Cotizaciones y despachos
             </p>
+
+            <ConnectionStatus />
           </div>
         </div>
 
@@ -682,6 +685,9 @@ export default function BaseDeliveryPanelV2({
               } else {
                 toggleSound();
               }
+
+              loadData(true)
+
             }}
             disabled={isRefreshing || isLoading}
             aria-label="Actualizar pedidos"
