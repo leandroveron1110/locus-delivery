@@ -20,6 +20,7 @@ import {
   baseCompletedDispatch,
   baseDestinationCoords,
   baseQuoteOrder,
+  fetchBaseDeleteAll,
   fetchBasePendingDispatches,
   fetchBaseUrgentQuotes,
   type BasePendingDispatch,
@@ -675,6 +676,23 @@ export default function BaseDeliveryPanelV2({
             ) : (
               <VolumeX size={17} />
             )}
+          </button>
+
+                    <button
+            type="button"
+            onClick={() => { 
+              fetchBaseDeleteAll()}
+            }
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-3"
+          >
+            <RefreshCw
+              size={16}
+              className={isRefreshing ? "animate-spin" : ""}
+            />
+
+            <span className="ml-2 hidden text-sm font-medium sm:inline">
+              borrar
+            </span>
           </button>
 
           <button

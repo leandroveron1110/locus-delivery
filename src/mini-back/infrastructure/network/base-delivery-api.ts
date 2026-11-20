@@ -1,6 +1,67 @@
 // src/mini-back/infrastructure/network/base-delivery-api.ts
 
 import { apiDelete, apiGet, apiPatch } from "@/lib/apiFetch";
+// Agregar en src/mini-back/infrastructure/network/base-delivery-api.ts
+
+export enum CommandAssignmentStatus {
+  ASSIGNED = "ASSIGNED",
+  GOING_TO_PICKUP = "GOING_TO_PICKUP",
+  PICKED_UP = "PICKED_UP",
+  DELIVERED = "DELIVERED",
+  RELEASED = "RELEASED",
+  CANCELLED = "CANCELLED",
+}
+
+export interface DeliveryCommandAssignment {
+  id: string;
+  commandId: string;
+  courierId: string;
+  status: CommandAssignmentStatus;
+  assignedAt: string;
+  acceptedAt: string | null;
+  pickedUpAt: string | null;
+  deliveredAt: string | null;
+  releasedAt: string | null;
+  courier?: {
+    id: string;
+    fullName: string;
+    phone: string | null;
+    vehicleType: string;
+  };
+}
+
+export interface DeliveryCommandV2WithAssignments extends DeliveryCommandV2 {
+  assignedCouriers: number;
+  paymentAmount: number | null;
+  assignments?: DeliveryCommandAssignment[];
+}
+
+/**
+ * Asigna un cadete a un comando (sirve tanto cuando lo toma el cadete como cuando lo asigna la base).
+ */
+export async function baseAssignCourierToCommand(
+  commandId: string,
+  courierId: string,
+): Promise<DeliveryCommandV2WithAssignments | null> {
+  return apiPatch<DeliveryCommandV2WithAssignments>(
+    `/delivery-commands-v2/${encodeURIComponent(commandId)}/assign-courier`,
+    { courierId },
+  );
+}
+
+/**
+ * Actualiza el progreso del cadete sobre un pedido (yendo a buscar, retirado, entregado, liberado).
+ */
+export async function updateCommandAssignmentProgress(
+  commandId: string,
+  courierId: string,
+  status: CommandAssignmentStatus,
+): Promise<DeliveryCommandV2WithAssignments | null> {
+  return apiPatch<DeliveryCommandV2WithAssignments>(
+    `/delivery-commands-v2/${encodeURIComponent(commandId)}/assignment-progress`,
+    { courierId, status },
+  );
+}
 
 export enum BusinessCommandStatusV2 {
   PENDING = "PENDING",
